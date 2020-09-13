@@ -37,6 +37,17 @@ if(!function_exists('hasJoinedGroup')) {
     }
 }
 
+
+if(!function_exists('writeGroupIconWrap')) {
+    function writeGroupIconWrap($group, $linkCssClass, $imageCssClass) {
+        if (Gdn::session()->isValid()) {
+            include_once Gdn::controller()->fetchViewLocation('helper_functions', 'group');
+            return writeGroupIcon($group, $linkCssClass, $imageCssClass);
+        }
+        return '';
+    }
+}
+
 if (!function_exists('WriteGroup')) :
 
     /**
@@ -55,7 +66,7 @@ if (!function_exists('WriteGroup')) :
         ?>
         <li id="Group_<?php echo $group->GroupID; ?>" class="<?php echo $cssClass.' '.$wrapCssClass; ?> ">
             <?php
-            echo writeGroupIcon($group, 'PhotoWrap','ProfilePhoto ProfilePhotoMedium Group-Icon');
+            echo writeGroupIconWrap($group, 'PhotoWrap','ProfilePhoto ProfilePhotoMedium Group-Icon');
             if (!property_exists($sender, 'CanEditGroups')) {
                 // $sender->CanEditGroups = val('PermsDiscussionsEdit', CategoryModel::categories($discussion->CategoryID)) && c('Vanilla.AdminCheckboxes.Use');
             }

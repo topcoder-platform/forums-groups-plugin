@@ -11,7 +11,15 @@ use Garden\Container\Container;
 
 
 class GroupsPlugin extends Gdn_Plugin {
-    const GROUPS_ROUTE = 'groups';
+    const GROUPS_ROUTE = '/groups';
+    const GROUP_ROUTE = '/group/';
+
+    /**
+     * Database updates.
+     */
+    public function structure() {
+        include __DIR__.'/structure.php';
+    }
 
     /**
      * Run once on enable.
@@ -59,13 +67,44 @@ class GroupsPlugin extends Gdn_Plugin {
     }
 
     public function discussionsController_afterDiscussionFilters_handler($sender){
-        echo '<li>'. anchor('Groups', '/groups').'</li>';
+        $this->addGroupLinkToMenu();
     }
-    /**
-     * Database updates.
-     */
-    public function structure() {
-        include __DIR__.'/structure.php';
+
+    public function discussionController_afterDiscussionFilters_handler($sender){
+        $this->addGroupLinkToMenu();
     }
-}
+
+    public function categoriesController_afterDiscussionFilters_handler($sender){
+        $this->addGroupLinkToMenu();
+    }
+
+    public function discussionController_discussionInfo_handler($sender, $args) {
+        if($sender->Data['Discussion']) {
+            $groupID = $sender->Data['Discussion']->GroupID;
+            if($groupID) {
+                $groupModel = new GroupModel();
+                $group = $groupModel->getByGroupID($groupID);
+                echo anchor($group->Name, GroupsPlugin::GROUP_ROUTE.$groupID);
+            }
+        }
+
+    }
+
+    public function postController_afterDiscussionSave_handler($sender, $args) {
+        if (!$args['Discussion']) {
+            return;
+        }
+        $discussion= $args['Discussion'];
+        if ($sender->deliveryType() == DELIVERY_TYPE_ALL) {
+            redirectTo(GroupsPlugin::GROUP_ROUTE.$discussion->GroupID);
+        } else {
+            $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$discussion->GroupID);
+        }
+    }
+
+    private function addGroupLinkToMenu() {
+        echo '<li>'. anchor('Groups', GroupsPlugin::GROUPS_ROUTE).'</li>';
+    }
+
+ }
 

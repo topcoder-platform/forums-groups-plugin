@@ -20,7 +20,7 @@ class GroupsController extends VanillaController {
 
     public function initialize() {
         parent::initialize();
-        $this->Menu->highlightRoute('/groups');
+        $this->Menu->highlightRoute(GroupsPlugin::GROUPS_ROUTE);
         /**
          * The default Cache-Control header does not include no-store, which can cause issues (e.g. inaccurate unread
          * status or new comment counts) when users visit the discussion list via the browser's back button.  The same
@@ -53,7 +53,7 @@ class GroupsController extends VanillaController {
         $this->canonicalUrl(url(concatSep('/', 'groups', pageNumber($Offset, $Limit, true, false)), true));
 
         $this->title(t('Groups'));
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => '/groups']]);
+        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE]]);
 
         $GroupModel = new GroupModel();
 

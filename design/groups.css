@@ -768,3 +768,11 @@ span.file-upload-choose, span.file-upload-browse {
 .js-image-preview-form-group {
    list-style-type: none;
 }
+
+.Section-GroupDiscussions .H {
+    display: block;
+    float: none;
+    font-size: 32px;
+    text-align: center;
+    width: 100%;
+}
