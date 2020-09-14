@@ -26,13 +26,13 @@ if (!$CancelUrl) {
     echo '</div>';
 
     echo '<div class="P">';
-    //echo $this->Form->label('Icon', 'Icon');
+    echo $this->Form->label('Icon', 'Icon');
     echo $this->Form->imageUploadPreview('Icon');
 
     echo '</div>';
 
     echo '<div class="P">';
-    // echo $this->Form->label('Banner', 'Banner');
+    echo $this->Form->label('Banner', 'Banner');
     echo $this->Form->imageUploadPreview('Banner');
     echo '</div>';
 
