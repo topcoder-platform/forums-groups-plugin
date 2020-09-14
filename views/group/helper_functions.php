@@ -87,8 +87,8 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $canEdit = true;
        //$canClose = GroupModel::checkPermission($groupID, 'Vanilla.Groups.Close');
         $canDelete = Gdn::session()->UserID == $group->OwnerID;
-        $canLeave = getRoleInGroupForCurrentUser($groupID) !== null;
-        $canInviteMember = true;
+        $canLeave = getRoleInGroupForCurrentUser($groupID) !== null &&  Gdn::session()->UserID != $group->OwnerID;
+       // $canInviteMember = true;
         $canManageMembers = getRoleInGroupForCurrentUser($groupID) == GroupModel::ROLE_LEADER;
 
 
@@ -174,11 +174,22 @@ if (!function_exists('writeGroupMembersWithDetails')) {
         }
     }
 }
+
+if (!function_exists('getImagePath')) {
+    function getImagePath($imagePath) {
+        // Image was uploaded to Filestack
+        if (strpos($imagePath, 'http') === 0) {
+            return $imagePath;
+        }
+        return  '/uploads/'.$imagePath;
+    }
+}
+
 if (!function_exists('writeGroupIcon')) {
     function writeGroupIcon($group, $linkCssClass, $imageCssClass) {
         $groupUrl = groupUrl($group);
-        $iconUrl = '/uploads/'.$group->Icon;
         if ($group->Icon) {
+            $iconUrl = getImagePath($group->Icon);
             echo anchor(
                 img($iconUrl, ['class' => $imageCssClass, 'aria-hidden' => 'true']),
                 $groupUrl, $linkCssClass);
@@ -188,8 +199,8 @@ if (!function_exists('writeGroupIcon')) {
 
 if (!function_exists('writeGroupBanner')) {
      function writeGroupBanner($group) {
-       $bannerUrl = '\/uploads\/'.$group->Banner;
        if($group->Banner) {
+          $bannerUrl = getImagePath($group->Banner);
           echo  '<div class="Group-Banner" style="background-image: url('.$bannerUrl.')"></div>';
         }
      }
