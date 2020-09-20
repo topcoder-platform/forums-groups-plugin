@@ -34,7 +34,26 @@ class GroupsController extends VanillaController {
         $this->fireEvent('AfterInitialize');
     }
 
-    public function index($Page = false) {
+    public function index() {
+        // Setup head
+        Gdn_Theme::section('GroupList');
+
+        $this->title(t('Groups'));
+        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE]]);
+
+        $GroupModel = new GroupModel();
+
+        $this->GroupData = $GroupModel->getMyGroups(false, '', false,  0);
+        $this->AvailableGroupData = $GroupModel->getAvailableGroups(false, '', false,  0);
+
+        $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
+        $this->setData('Groups', $this->GroupData, true);
+        $this->setData('AvailableGroups', $this->AvailableGroupData, true);
+
+        $this->render();
+    }
+
+    public function mine($Page = false) {
         // Setup head
         $this->allowJSONP(true);
         Gdn_Theme::section('GroupList');
@@ -50,17 +69,18 @@ class GroupsController extends VanillaController {
         $this->fireEvent('AfterPageCalculation');
 
         // Set canonical URL
-        $this->canonicalUrl(url(concatSep('/', 'groups', pageNumber($Offset, $Limit, true, false)), true));
+        $this->canonicalUrl(url(concatSep('/', '/groups/mine', pageNumber($Offset, $Limit, true, false)), true));
 
-        $this->title(t('Groups'));
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE]]);
+        $this->title(t('My Groups'));
+        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+            ['Name' => t('My Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/mine']]);
 
         $GroupModel = new GroupModel();
 
         $where = false;
-        $this->GroupData = $GroupModel->getWhere(false, '', 'asc', $Limit, $Offset);
+        $this->GroupData = $GroupModel->getMyGroups($where, '', $Limit, $Offset);
 
-        $CountGroups = $GroupModel->getCount($where);
+        $CountGroups = $GroupModel->countMyGroups($where);
         $this->setData('CountGroups', $CountGroups);
         $this->setData('Groups', $this->GroupData, true);
         $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
@@ -71,7 +91,7 @@ class GroupsController extends VanillaController {
         $this->EventArguments['PagerType'] = 'Pager';
         $this->fireEvent('BeforeBuildPager');
         if (!$this->data('_PagerUrl')) {
-            $this->setData('_PagerUrl', 'groups/{Page}');
+            $this->setData('_PagerUrl', '/groups/mine/{Page}');
         }
         $queryString = '';// DiscussionModel::getSortFilterQueryString($DiscussionModel->getSort(), $DiscussionModel->getFilters());
         $this->setData('_PagerUrl', $this->data('_PagerUrl').$queryString);
@@ -89,6 +109,77 @@ class GroupsController extends VanillaController {
         $this->setData('_Page', $Page);
         $this->setData('_Limit', $Limit);
         $this->fireEvent('AfterBuildPager');
+
+        $this->View = 'list';
+
+        // Deliver JSON data if necessary
+        if ($this->_DeliveryType != DELIVERY_TYPE_ALL) {
+            $this->setJson('LessRow', $this->Pager->toString('less'));
+            $this->setJson('MoreRow', $this->Pager->toString('more'));
+            $this->View = 'groups';
+        }
+
+        $this->render();
+    }
+
+    public function all($Page = false) {
+        // Setup head
+        $this->allowJSONP(true);
+        Gdn_Theme::section('GroupList');
+
+        // Determine offset from $Page
+        list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
+        $Page = pageNumber($Offset, $Limit);
+
+        // Allow page manipulation
+        $this->EventArguments['Page'] = &$Page;
+        $this->EventArguments['Offset'] = &$Offset;
+        $this->EventArguments['Limit'] = &$Limit;
+        $this->fireEvent('AfterPageCalculation');
+
+        // Set canonical URL
+        $this->canonicalUrl(url(concatSep('/', '/groups/all', pageNumber($Offset, $Limit, true, false)), true));
+
+        $this->title(t('Available Groups'));
+        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+            ['Name' => t('Available Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/all']]);
+
+        $GroupModel = new GroupModel();
+
+        $where = false;
+        $this->GroupData = $GroupModel->getAvailableGroups($where, '', $Limit, $Offset);
+
+        $CountGroups = $GroupModel->countAvailableGroups($where);
+        $this->setData('CountGroups', $CountGroups);
+        $this->setData('Groups', $this->GroupData, true);
+        $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
+        $this->setJson('Loading', $Offset.' to '.$Limit);
+
+        // Build a pager
+        $PagerFactory = new Gdn_PagerFactory();
+        $this->EventArguments['PagerType'] = 'Pager';
+        $this->fireEvent('BeforeBuildPager');
+        if (!$this->data('_PagerUrl')) {
+            $this->setData('_PagerUrl', '/groups/all/{Page}');
+        }
+        $queryString = '';
+        $this->setData('_PagerUrl', $this->data('_PagerUrl').$queryString);
+        $this->Pager = $PagerFactory->getPager($this->EventArguments['PagerType'], $this);
+        $this->Pager->ClientID = 'Pager';
+        $this->Pager->configure(
+            $Offset,
+            $Limit,
+            $this->data('CountGroups'),
+            $this->data('_PagerUrl')
+        );
+
+        PagerModule::current($this->Pager);
+
+        $this->setData('_Page', $Page);
+        $this->setData('_Limit', $Limit);
+        $this->fireEvent('AfterBuildPager');
+
+        $this->View = 'list';
 
         // Deliver JSON data if necessary
         if ($this->_DeliveryType != DELIVERY_TYPE_ALL) {

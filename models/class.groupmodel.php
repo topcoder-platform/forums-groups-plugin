@@ -76,6 +76,145 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
+     * Get the list of public group IDs
+     *
+     */
+    public function getAllPublicGroupIDs(){
+        $sql = $this->SQL;
+
+        // Build up the base query. Self-join for optimization.
+        $sql->select('g.GroupID')
+            ->from('Group g')
+            ->where('g.Type' , [GroupModel::TYPE_PUBLIC] );
+
+        $data = $sql->get()->resultArray();
+        return array_column($data, 'GroupID');
+    }
+
+    /**
+     * Get all available groups including private ines
+     */
+    public function getAvailableGroups($where =[], $orderFields = '', $limit = false, $offset = false) {
+
+        if ($limit === 0) {
+            trigger_error("You should not supply 0 to for $limit in GroupModel->getAvailableGroups()", E_USER_NOTICE);
+        }
+        if (empty($limit)) {
+            $limit = c('Vanilla.Groups.PerPage', 30);
+        }
+        if (empty($offset)) {
+            $offset = 0;
+        }
+
+        if (!is_array($where)) {
+            $where = [];
+        }
+
+        $sql = $this->SQL;
+
+        // Build up the base query. Self-join for optimization.
+        $sql->select('g.*')
+            ->from('Group g')
+            ->leftjoin('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
+            ->where('ug.UserID' , null)
+            ->where('g.Type' , [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE] )
+            ->where($where)
+            ->limit($limit, $offset);
+
+        foreach ($orderFields as $field => $direction) {
+            $sql->orderBy($this->addFieldPrefix($field), $direction);
+        }
+
+        $data = $sql->get();
+        return $data;
+    }
+
+    /**
+     * Get count of available groups
+     */
+    public function countAvailableGroups($where =[]) {
+
+        if (!is_array($where)) {
+            $where = [];
+        }
+
+        $sql = $this->SQL;
+
+        // Build up the base query. Self-join for optimization.
+        $sql->select('g.*')
+            ->from('Group g')
+            ->leftjoin('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
+            ->where('ug.UserID' , null)
+            ->where('g.Type' , [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE] )
+            ->where($where);
+
+        $data = $sql->get()
+            ->firstRow();
+
+        return $data === false ? 0 : $data->Count;
+    }
+
+   /**
+    * Get the list of groups for the current user
+    *
+    */
+    public function getMyGroups($where =[], $orderFields = '', $limit = false, $offset = false) {
+        if ($limit === 0) {
+            trigger_error("You should not supply 0 to for $limit in GroupModel->getLeaders()", E_USER_NOTICE);
+        }
+        if (empty($limit)) {
+            $limit = c('Vanilla.Groups.PerPage', 30);
+        }
+        if (empty($offset)) {
+            $offset = 0;
+        }
+
+        if (!is_array($where)) {
+            $where = [];
+        }
+
+        $sql = $this->SQL;
+
+        // Build up the base query. Self-join for optimization.
+        $sql->select('g.*, ug.Role, ug.DateInserted')
+            ->from('Group g')
+            ->join('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
+            ->limit($limit, $offset);
+
+        foreach ($orderFields as $field => $direction) {
+            $sql->orderBy($this->addFieldPrefix($field), $direction);
+        }
+
+        $sql->where($where);
+
+        $data = $sql->get();
+        return $data;
+    }
+
+
+    /**
+     * Get count of the groups fir the current user
+     */
+    public function countMyGroups($where =[]) {
+        if (!is_array($where)) {
+            $where = [];
+        }
+
+        $sql = $this->SQL;
+
+        // Build up the base query. Self-join for optimization.
+        $sql->select('count(*) Count')
+            ->from('Group g')
+            ->join('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
+            ->where($where);
+
+        $data = $sql->get()
+            ->firstRow();
+
+        return $data === false ? 0 : $data->Count;
+    }
+
+    /**
      * Join a new member
      * @param $GroupID
      * @param $UserID
@@ -83,8 +222,42 @@ class GroupModel extends Gdn_Model {
      */
     public function join($GroupID, $UserID){
         $Fields = ['Role' => GroupModel::ROLE_MEMBER, 'GroupID' => $GroupID,'UserID' => $UserID, 'DateInserted' => Gdn_Format::toDateTime()];
-        $result = $this->SQL->insert('UserGroup', $Fields);
-        return $result;
+        $this->SQL->insert('UserGroup', $Fields);
+        $this->notifyJoinGroup($GroupID, $UserID);
+    }
+
+    /**
+     * Invite a new member
+     * @param $GroupID
+     * @param $UserID
+     * @return bool|Gdn_DataSet|object|string
+     */
+    public function invite($GroupID, $UserID){
+        $this->sendInviteEmail($GroupID, $UserID);
+    }
+
+    /**
+     * Accept an invitation
+     * @param $GroupID
+     * @param $UserID
+     * @return bool|Gdn_DataSet|object|string
+     */
+    public function accept($groupID, $userID){
+        $this->join($groupID, $userID);
+    }
+
+    /**
+     * Returntur if user is a member of the group
+     *
+     */
+    public function isMemberOfGroup($userID, $groupID) {
+        $groups = $this->memberOf($userID);
+        foreach ($groups as $group) {
+            if ($group->GroupID == $groupID) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -224,6 +397,7 @@ class GroupModel extends Gdn_Model {
                         'DateInserted' => Gdn_Format::toDateTime()
                     ]
                 );
+                $this->notifyNewGroup($groupID, $fields['Name']);
             }
 
            if (Gdn::cache()->activeEnabled()) {
@@ -286,6 +460,423 @@ class GroupModel extends Gdn_Model {
             ->where('UserID', $userID)
             ->get();
         return $result->result();
+    }
 
+    /**
+     * Get a group role
+     */
+    public function getGroupRoleFor($userID, $groupID) {
+        $sql = $this->SQL;
+        $result = $sql->select('ug.Role')
+            ->from('UserGroup ug')
+            ->where('UserID', $userID)
+            ->where('GroupID', $groupID)
+            ->get()->firstRow();
+        return $result;
+    }
+
+    /**
+     * Check group view permission
+     *
+     */
+    public function canView($group) {
+        if($group->Type == GroupModel::TYPE_PUBLIC){
+            return true;
+        } else {
+            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+            $groupRole = val('Role', $result, null);
+            if($groupRole ||  Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check add group permission
+     *
+     */
+    public function canAddGroup() {
+        return Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_ADD_PERMISSION);
+    }
+
+    /**
+     * Check edit group permission
+     *
+     */
+    public function canEdit($group) {
+       $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+       $groupRole = val('Role', $result, null);
+       if($groupRole == GroupModel::ROLE_LEADER ||
+           Gdn::session()->UserID == $group->OwnerID ||
+           Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+           return true;
+       }
+
+       return false;
+    }
+
+    /**
+     * Check delete group permission
+     *
+     */
+    public function canDelete($group){
+        return Gdn::session()->UserID == $group->OwnerID;
+    }
+
+    /**
+     *  Check join group permission
+     *
+     */
+    public function canJoin($group) {
+        return $group->Type == GroupModel::TYPE_PUBLIC;
+    }
+
+    /**
+     *  Check remove member permission
+     *
+     */
+    public function canRemoveMember($group) {
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole == GroupModel::ROLE_LEADER ||
+            Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check change group role permission
+     *
+     */
+    public function canChangeGroupRole($group) {
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole == GroupModel::ROLE_LEADER ||
+            Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check leave group permission
+     *
+     */
+    public function canLeave($group) {
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        $groupRole = val('Role', $result, null);
+        if(Gdn::session()->UserID == $group->OwnerID) {
+            return false;
+        }
+
+        return $groupRole != null;
+    }
+
+    /**
+     *  Check manage members permission
+     *
+     */
+    public function canManageMembers($group) {
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole == GroupModel::ROLE_LEADER ||
+            Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check invite member permission
+     *
+     */
+    public function canInviteNewMember($group) {
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole === GroupModel::ROLE_LEADER ||
+            Gdn::session()->UserID === $group->OwnerID ||
+            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_EMAIL_INVITATIONS_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check add group discusion permission
+     *
+     */
+    public function canAddDiscussion($group) {
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole || Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check add  group announcement permission
+     *
+     */
+    public function canAddAnnouncement($group) {
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check view group discusion permission
+     *
+     */
+    public function canViewDiscussion($discussion) {
+        $groupID= $discussion->GroupID;
+        if(!$groupID) {
+            return true;
+        }
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check edit group discusion permission
+     *
+     */
+    public function canEditDiscussion($discussion) {
+        $canEditDiscussion = DiscussionModel::canEdit($discussion) ;
+        $groupID= $discussion->GroupID;
+        if(!$groupID) {
+            return $canEditDiscussion;
+        }
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+
+        if(($canEditDiscussion && $groupRole && $discussion->IInsertUserID == Gdn::session()->UserID)
+            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check dismiss group discusion permission
+     *
+     */
+    public function canDismissDiscussion($discussion) {
+        $canDismissDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Dismiss', true)
+        && $discussion->Announce
+        && !$discussion->Dismissed
+        && Gdn::session()->isValid();
+
+        $groupID= $discussion->GroupID;
+        if(!$groupID ) {
+            return $canDismissDiscussion;
+        }
+
+        if($canDismissDiscussion === false) {
+            return $canDismissDiscussion;
+        }
+
+        $group = $this->getByGroupID($groupID);
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
+                || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check announce group discusion permission
+     *
+     */
+    public function canAnnounceDiscussion($discussion) {
+        $canAnnounceDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Announce', true);
+        $groupID = $discussion->GroupID;
+        if(!$groupID ) {
+            return $canAnnounceDiscussion;
+        }
+
+        if($canAnnounceDiscussion === false) {
+            return $canAnnounceDiscussion;
+        }
+
+        $group = $this->getByGroupID($groupID);
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
+            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check sink group discusion permission
+     *
+     */
+    public function canSinkDiscussion($discussion) {
+        $canSinkDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Sink', true);
+        $groupID = $discussion->GroupID;
+        if(!$groupID ) {
+            return $canSinkDiscussion;
+        }
+
+        if($canSinkDiscussion === false) {
+            return $canSinkDiscussion;
+        }
+
+        $group = $this->getByGroupID($groupID);
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
+            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check close group discusion permission
+     *
+     */
+    public function canCloseDiscussion($discussion) {
+        $canCloseDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Close', true);
+        $groupID = $discussion->GroupID;
+        if(!$groupID ) {
+            return $canCloseDiscussion;
+        }
+
+        if($canCloseDiscussion === false) {
+            return $canCloseDiscussion;
+        }
+
+        $group = $this->getByGroupID($groupID);
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
+            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     *  Check move group discusion permission
+     *
+     */
+    public function canMoveDiscussion($discussion) {
+        $groupID = $discussion->GroupID;
+        if(!$groupID ) {
+            return $this->canEditDiscussion($discussion);
+        }
+
+        $group = $this->getByGroupID($groupID);
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
+            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    public function canRefetchDiscussion($discussion) {
+        $groupID = $discussion->GroupID;
+        return $this->canEditDiscussion($discussion);
+    }
+
+    public function canDeleteDiscussion($discussion) {
+        $canDeleteDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Delete', true);
+        $groupID= $discussion->GroupID;
+        if(!$groupID) {
+             return $canDeleteDiscussion;
+        }
+
+        $group = $this->getByGroupID($groupID);
+        if($canDeleteDiscussion && Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Send invite email.
+     *
+     * @param int $userID
+     * @param string $password
+     */
+    public function sendInviteEmail($GroupID, $userID) {
+        $Group = $this->getByGroupID($GroupID);
+        $session = Gdn::session();
+        $sender = Gdn::userModel()->getID($session->UserID);
+        $user = Gdn::userModel()->getID($userID);
+        $appTitle = Gdn::config('Garden.Title');
+        $email = new Gdn_Email();
+        $email->subject('['.$appTitle.'] '.$sender->Name.' invited you to '.$Group->Name);
+        $email->to($user->Email);
+        $greeting = 'Hello!';
+        $message = $greeting.'<br/>'.
+            'You can accept or decline this invitation.';
+
+        $emailTemplate = $email->getEmailTemplate()
+            ->setTitle('['.$appTitle.'] '.$sender->Name.' invited you to '.$Group->Name)
+            ->setMessage($message)
+            ->setButton(externalUrl('/group/accept/'.$Group->GroupID.'?userID='.$userID), 'Accept' );
+
+        $email->setEmailTemplate($emailTemplate);
+
+        try {
+            $email->send();
+        } catch (Exception $e) {
+            if (debug()) {
+                throw $e;
+            }
+        }
+    }
+
+
+    public function notifyNewGroup($groupID, $groupName) {
+        $activityModel = Gdn::getContainer()->get(ActivityModel::class);
+        $data = [
+            "ActivityType" => 'NewGroup',
+            "ActivityUserID" => Gdn::session()->UserID,
+            "HeadlineFormat" => '{ActivityUserID,user} created <a href="{Url,html}">{Data.Name,text}</a>',
+            "RecordType" => "Group",
+            "RecordID" => $groupID,
+            "Route" => groupUrl($groupID, "", "/"),
+            "Data" => [
+                "Name" => $groupName,
+            ]
+        ];
+        $activityModel->save($data);
+    }
+
+    public function notifyJoinGroup($groupID, $userID) {
+        $group = $this->getID($groupID);
+
+        $activityModel = Gdn::getContainer()->get(ActivityModel::class);
+        $data = [
+            "ActivityType" => 'JoinedGroup',
+            "ActivityUserID" => $userID,
+            "HeadlineFormat" => '{ActivityUserID,user} joined <a href="{Url,html}">{Data.Name,text}</a>',
+            "RecordType" => "Group",
+            "RecordID" => $group->GroupID,
+            "Route" => groupUrl($group->GroupID, "", "/"),
+            "Data" => [
+                "Name" => $group->Name,
+            ]
+        ];
+        $activityModel->save($data);
     }
 }

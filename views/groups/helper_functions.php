@@ -48,7 +48,17 @@ if(!function_exists('writeGroupIconWrap')) {
     }
 }
 
-if (!function_exists('WriteGroup')) :
+
+if (!function_exists('writeGroups')) {
+    function writeGroups($Groups, $sender){
+        foreach ($Groups->result() as $Group) {
+            writeGroup($Group, $sender,  Gdn::session());
+        }
+
+    }
+}
+
+if (!function_exists('writeGroup')) :
 
     /**
      *
@@ -74,8 +84,12 @@ if (!function_exists('WriteGroup')) :
             <span class="Options">
                 <div class="Buttons">
                   <?php
-                    if(hasJoinedGroup($group->GroupID) == null) {
+                    if($group->Type == GroupModel::TYPE_PUBLIC && hasJoinedGroup($group->GroupID) == null) {
                         echo anchor('Join', '/group/join/' . $group->GroupID, 'Button Popup', '');
+                    }
+
+                    if(hasJoinedGroup($group->GroupID) === GroupModel::ROLE_LEADER) {
+                        echo anchor('Invite', '/group/invite/' . $group->GroupID, 'Button Popup', '');
                     }
                   ?>
                   </div>
@@ -96,4 +110,3 @@ if (!function_exists('WriteGroup')) :
     <?php
     }
 endif;
-
