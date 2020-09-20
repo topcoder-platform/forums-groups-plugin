@@ -34,36 +34,6 @@ if(!function_exists('getRoleInGroupForCurrentUser')) {
     }
 }
 
-if (!function_exists('groupUrl')) {
-    /**
-     * Return a URL for a group. This function is in here and not functions.general so that plugins can override.
-     *
-     * @param object|array $discussion
-     * @param int|string $page
-     * @param bool $withDomain
-     * @return string
-     */
-    function groupUrl($group, $page = '', $withDomain = true) {
-        $group = (object)$group;
-        $name = Gdn_Format::url($group->Name);
-
-        // Disallow an empty name slug in discussion URLs.
-        if (empty($name)) {
-            $name = 'x';
-        }
-
-        $result = '/group/'.$group->GroupID;
-
-        if ($page) {
-            if ($page > 1 || Gdn::session()->UserID) {
-                $result .= '/p'.$page;
-            }
-        }
-
-        return url($result, $withDomain);
-    }
-}
-
 if (!function_exists('getGroupOptionsDropdown')) {
     /**
      * Constructs an options dropdown menu for a group.
@@ -76,27 +46,22 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $dropdown = new DropdownModule('dropdown', '', 'OptionsMenu');
         $sender = Gdn::controller();
         $session = Gdn::session();
-
+        $groupModel = new GroupModel();
         if ($group == null) {
             $group = $sender->data('Group');
         }
 
         $groupID = $group->GroupID;
-
-        //TODO: Permissions
-        $canEdit = true;
-       //$canClose = GroupModel::checkPermission($groupID, 'Vanilla.Groups.Close');
-        $canDelete = Gdn::session()->UserID == $group->OwnerID;
-        $canLeave = getRoleInGroupForCurrentUser($groupID) !== null &&  Gdn::session()->UserID != $group->OwnerID;
-       // $canInviteMember = true;
-        $canManageMembers = getRoleInGroupForCurrentUser($groupID) == GroupModel::ROLE_LEADER;
-
-
+        $canEdit = $groupModel->canEdit($group) ;
+        $canDelete = $groupModel->canDelete($group) ;
+        $canLeave = $groupModel->canLeave($group);
+        $canInviteMember = $groupModel->canInviteNewMember($group);
+        $canManageMembers = $groupModel->canManageMembers($group);
         $dropdown
             ->addLinkIf($canEdit, t('Edit Group'), '/group/edit/'.$groupID, 'edit')
             ->addLinkIf($canLeave, t('Leave Group'), '/group/leave/'.$groupID, 'leave', 'LeaveGroup Popup')
             ->addLinkIf($canDelete, t('Delete Group'), '/group/delete?groupid='.$groupID, 'delete', 'DeleteGroup Popup')
-            //->addLinkIf($canInviteMember, t('Invite Member'), '/group/invite/'.$groupID, 'invite')
+            ->addLinkIf($canInviteMember, t('Invite Member'), '/group/invite/'.$groupID, 'invite','InviteGroup Popup')
             ->addLinkIf($canManageMembers, t('Manage Members'), '/group/members/'.$groupID, 'manage');
 
        return $dropdown;

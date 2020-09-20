@@ -45,11 +45,17 @@ class GroupController extends VanillaController {
      * @param int $GroupID Unique group ID
      */
     public function index($GroupID = '') {
-        // Setup head
-         Gdn_Theme::section('Group');
-        // Load the discussion record
         $GroupID = (is_numeric($GroupID) && $GroupID > 0) ? $GroupID : 0;
         $Group = $this->findGroup($GroupID);
+
+        if(!$this->GroupModel->canView($Group)) {
+            throw permissionException();
+        }
+
+        // Setup head
+         Gdn_Theme::section('Group');
+
+        // Load the discussion record
         $this->setData('Group', $Group, true);
 
         $this->title($Group->Name);
@@ -63,7 +69,9 @@ class GroupController extends VanillaController {
         // Find all discussions with content from after DateMarkedRead.
         $discussionModel = new DiscussionModel();
         $wheres = ['d.GroupID' => $GroupID];
-        $discussions = $discussionModel->get(0, '', $wheres);
+
+        //Don't use WhereRecent due to load all data including announce.
+        $discussions = $discussionModel->get(0, c('Vanilla.Discussions.PerPage', 30), $wheres);
         $announcements = $discussionModel->getAnnouncements($wheres);
         $this->setData('Announcements', $announcements);
         $this->setData('Discussions', $discussions);
@@ -75,25 +83,27 @@ class GroupController extends VanillaController {
      *
      */
     public function add() {
-        //TODO: check permissions
-
+        if(!$this->GroupModel->canAddGroup()) {
+            throw permissionException();
+        }
         $this->title(t('New Group'));
-        // Use the edit form with no groupid specified.
+        // Use the edit form without groupID
         $this->View = 'Edit';
         $this->edit();
     }
 
     /**
      * Remove a group.
-     *
-     * @since 2.0.0
-     * @access public
+     * @param bool $GroupID
+     * @throws Gdn_UserException
      */
     public function delete($GroupID = false) {
-        //TODO: permissions
-        $this->title(t('Delete Group'));
-
         $Group = $this->findGroup($GroupID);
+
+        if(!$this->GroupModel->canDelete($Group)) {
+            throw permissionException();
+        }
+        $this->title(t('Delete Group'));
 
        // Make sure the form knows which item we are deleting.
         $this->Form->addHidden('GroupID', $Group->GroupID);
@@ -111,33 +121,36 @@ class GroupController extends VanillaController {
      * Edit a group.
      *
      * @param int|bool $groupID
-     * @since 2.0.0
-     * @access public
      */
     public function edit($groupID = false) {
         if ($this->title() == '') {
             $this->title(t('Edit Group'));
         }
 
-        $this->Group = $this->GroupModel->getByGroupID($groupID);
+        $Group = $this->GroupModel->getByGroupID($groupID);
         if(!$groupID) {
-            $this->Group->OwnerID = Gdn::session()->UserID;
-            $this->Group->LeaderID = Gdn::session()->UserID;
+            $Group->OwnerID = Gdn::session()->UserID;
+            $Group->LeaderID = Gdn::session()->UserID;
+        } else {
+            if(!$this->GroupModel->canEdit($Group)) {
+                throw permissionException();
+            }
+
         }
         $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => $this->Group->Name ? $this->Group->Name: $this->title() ]]);
+            ['Name' => $Group->Name ? $Group->Name: $this->title() ]]);
 
         // Set the model on the form.
         $this->Form->setModel($this->GroupModel);
 
         // Make sure the form knows which item we are editing.
         $this->Form->addHidden('GroupID', $groupID);
-        $this->Form->addHidden('OwnerID', $this->Group->OwnerID);
+        $this->Form->addHidden('OwnerID', $Group->OwnerID);
 
         // If seeing the form for the first time...
         if ($this->Form->authenticatedPostBack() === false) {
             // Get the group data for the requested $GroupID and put it into the form.
-            $this->Form->setData($this->Group);
+            $this->Form->setData($Group);
         } else {
 
             // If the form has been posted back...
@@ -164,10 +177,14 @@ class GroupController extends VanillaController {
      * @access public
      */
     public function members($GroupID = '',$Page = false) {
-        //TODO: check permissions
+
         $this->allowJSONP(true);
         Gdn_Theme::section('Group');
         $Group = $this->findGroup($GroupID);
+
+        if(!$this->GroupModel->canView($Group)) {
+            throw permissionException();
+        }
 
         // Determine offset from $Page
         list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
@@ -229,6 +246,10 @@ class GroupController extends VanillaController {
 
         $Group = $this->findGroup($GroupID);
 
+        if(!$this->GroupModel->canRemoveMember($Group)) {
+            throw permissionException();
+        }
+
         if ($this->GroupModel->removeMember($Group->GroupID, $MemberID) === false) {
             $this->Form->addError('Failed to remove a member from this group.');
         }
@@ -247,6 +268,10 @@ class GroupController extends VanillaController {
     public function setrole($GroupID, $Role,$MemberID) {
         $Group = $this->findGroup($GroupID);
 
+        if(!$this->GroupModel->canChangeGroupRole($Group)) {
+            throw permissionException();
+        }
+
         if(!$this->GroupModel->setRole($Group->GroupID, $MemberID,$Role)) {
             $this->Form->addError('Failed to change a role for the member.');
         }
@@ -263,11 +288,59 @@ class GroupController extends VanillaController {
     public function join($GroupID) {
         $Group = $this->findGroup($GroupID);
 
+        if(!$this->GroupModel->canJoin($Group)) {
+            throw permissionException();
+        }
+
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $result = $this->GroupModel->join($GroupID, Gdn::session()->UserID);
+            $this->GroupModel->join($GroupID, Gdn::session()->UserID);
             $this->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$GroupID);
         }
+        $this->render();
+    }
+
+    /**
+     * Join a group
+     * @param $GroupID
+     * @throws Gdn_UserException
+     */
+    public function invite($GroupID) {
+         $Group = $this->findGroup($GroupID);
+
+        if(!$this->GroupModel->canInviteNewMember($Group)) {
+            throw permissionException();
+        }
+        $this->setData('Group', $Group);
+
+        if ($this->Form->authenticatedPostBack(true)) {
+            $username = $this->Form->getFormValue('Username');
+            if($username) {
+                $userModel = Gdn::userModel();
+                $user = $userModel->getByUsername($username);
+                if (!$user) {
+                    $this->Form->addError('User wasn\'t found.');
+                } else {
+                    if($user->UserID == Gdn::session()->UserID) {
+                        $this->Form->addError('You are a member of this group.');
+                    } else {
+                        try {
+                            if($this->GroupModel->isMemberOfGroup($user->UserID, $GroupID)) {
+                                $this->Form->addError('User is a member of this group.');
+                            } else {
+                                $this->GroupModel->invite($GroupID, $user->UserID);
+                                $this->render('invitation_sent');
+                            }
+                        } catch (\Exception $e) {
+                            $this->Form->addError('Error' . $e->getMessage());
+                        }
+                    }
+                }
+            } else {
+                $this->Form->validateRule('Username', 'ValidateRequired', t('You must provide Username.'));
+            }
+        }
+
         $this->render();
     }
 
@@ -278,6 +351,10 @@ class GroupController extends VanillaController {
      */
     public function leave($GroupID) {
        $Group = $this->findGroup($GroupID);
+       if(!$this->GroupModel->canLeave($Group)) {
+            throw permissionException();
+       }
+
        $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
             if ($this->GroupModel->removeMember($GroupID, Gdn::session()->UserID) === false) {
@@ -291,12 +368,31 @@ class GroupController extends VanillaController {
 
 
     /**
+     * Accept a group invitation
+     * @param $GroupID
+     * @param $UserID
+     * @throws Gdn_UserException
+     */
+    public function accept($GroupID, $UserID) {
+        $Group = $this->findGroup($GroupID);
+        if(!$this->GroupModel->isMemberOfGroup($UserID, $GroupID)) {
+            $this->GroupModel->accept($GroupID, $UserID);
+        }
+        redirectTo(GroupsPlugin::GROUP_ROUTE.$GroupID);
+    }
+
+
+    /**
      * Default all group discussions view: chronological by most recent comment.
      *
      * @param int $Page Multiplied by PerPage option to determine offset.
      */
     public function discussions($GroupID='',$Page = false) {
         $Group = $this->findGroup($GroupID);
+
+        if(!$this->GroupModel->canView($Group)) {
+            throw permissionException();
+        }
 
         $this->Menu->highlightRoute('/group');
         $this->addJsFile('discussions.js', 'vanilla');
@@ -354,35 +450,7 @@ class GroupController extends VanillaController {
             throw notFoundException();
         }
 
-        // Setup head.
         $this->title('Group Discussions');
-
-        // Add modules
-        $this->addModule('DiscussionFilterModule');
-        $this->addModule('NewDiscussionModule');
-        $this->addModule('CategoriesModule');
-        $this->addModule('BookmarkedModule');
-        $this->addModule('TagModule');
-
-        $categoryModel = new CategoryModel();
-        $followingEnabled = $categoryModel->followingEnabled();
-        if ($followingEnabled) {
-            $saveFollowing = Gdn::request()->get('save') && Gdn::session()->validateTransientKey(Gdn::request()->get('TransientKey', ''));
-            $followed = paramPreference(
-                'followed',
-                'FollowedDiscussions',
-                'Vanilla.SaveFollowingPreference',
-                null,
-                $saveFollowing
-            );
-            if ($this->SelfUrl === "discussions") {
-                $this->enableFollowingFilter = true;
-            }
-        } else {
-            $followed = false;
-        }
-        $this->setData('EnableFollowingFilter', $this->enableFollowingFilter);
-        $this->setData('Followed', $followed);
 
         // Set criteria & get discussions data
         $this->setData('Category', false, true);
@@ -393,29 +461,10 @@ class GroupController extends VanillaController {
         $this->setData('Filters', $DiscussionModel->getFilters());
 
         // Check for individual categories.
-        $categoryIDs = null;//$this->getCategoryIDs();
+        $categoryIDs = [$Group->CategoryID];
         // Fix to segregate announcement conditions until announcement caching has been reworked.
         // See https://github.com/vanilla/vanilla/issues/7241
         $where = $announcementsWhere = ['d.GroupID'=> $GroupID, ];
-
-
-        if ($this->data('Followed')) {
-            $followedCategories = array_keys($categoryModel->getFollowed(Gdn::session()->UserID));
-            $visibleCategoriesResult = CategoryModel::instance()->getVisibleCategoryIDs(['filterHideDiscussions' => true]);
-            if ($visibleCategoriesResult === true) {
-                $visibleFollowedCategories = $followedCategories;
-            } else {
-                $visibleFollowedCategories = array_intersect($followedCategories, $visibleCategoriesResult);
-            }
-            $where['d.CategoryID'] = $visibleFollowedCategories;
-        } elseif ($categoryIDs) {
-            $where['d.CategoryID'] = $announcementsWhere['d.CategoryID'] = CategoryModel::filterCategoryPermissions($categoryIDs);
-        } else {
-            $visibleCategoriesResult = CategoryModel::instance()->getVisibleCategoryIDs(['filterHideDiscussions' => true]);
-            if ($visibleCategoriesResult !== true) {
-                $where['d.CategoryID'] = $visibleCategoriesResult;
-            }
-        }
 
         $countDiscussionsWhere = ['d.GroupID'=> $GroupID, 'Announce'=> [0,1]];
         // Get Discussion Count
@@ -430,8 +479,7 @@ class GroupController extends VanillaController {
         $this->setData('CountDiscussions', $CountDiscussions);
 
         // Get Discussions
-        $this->DiscussionData = $DiscussionModel->getWhereRecent($where, $Limit, $Offset);
-
+        $this->DiscussionData = $DiscussionModel->get($where, $Limit, $Offset);
         $this->setData('Discussions', $this->DiscussionData, true);
         $this->setJson('Loading', $Offset.' to '.$Limit);
 
@@ -478,6 +526,10 @@ class GroupController extends VanillaController {
     public function announcement($GroupID=''){
         $Group = $this->findGroup($GroupID);
 
+        if(!$this->GroupModel->canAddAnnouncement($Group)) {
+            throw permissionException();
+        }
+
         $this->setData('Breadcrumbs',
             [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
                 ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Announcement')]]);
@@ -494,6 +546,10 @@ class GroupController extends VanillaController {
      */
     public function discussion($GroupID=''){
         $Group = $this->findGroup($GroupID);
+
+        if(!$this->GroupModel->canAddDiscussion($Group)) {
+            throw permissionException();
+        }
 
         $this->setData('Breadcrumbs',   [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Discussion')]]);
@@ -525,7 +581,8 @@ class GroupController extends VanillaController {
 
     private function setDiscussionData($Group, $isAnnouncement) {
         $announce = 0; // It's created in the category
-        if($isAnnouncement) {
+        if($isAnnouncement === true) {
+            // User has to have 'Vanilla.Discussions.Announce' for Groups Category
             $announce = 2;
         }
 
@@ -537,17 +594,14 @@ class GroupController extends VanillaController {
         $this->setData('CurrentFormName', $currentFormName);
         $this->setData('Announce', $announce);
         $this->setData('Group', $Group);
-        $this->Form->Action = '/post/discussion';
-        //$this->setData('Forms', $forms);
-
+        $categoryModel = new CategoryModel();
+        $category = $categoryModel->getByCode('groups');
+        $this->setData('Category', $category);
+        $categoryID = val('CategoryID', $category);
+        $this->Form->Action = '/post/discussion?categoryUrlCode=groups';
         $this->Form->addHidden('GroupID', $Group->GroupID);
         $this->Form->addHidden('Announce', $announce);
-
-        $category = CategoryModel::categories('groups');
-        if ($category) {
-            $categoryID = val('CategoryID', $category);
-            $this->Form->addHidden('CategoryID', $categoryID);
-        }
+        $this->Form->addHidden('CategoryID', $categoryID);
 
         $this->fireEvent('AfterForms');
     }

@@ -13,6 +13,9 @@ use Garden\Container\Container;
 class GroupsPlugin extends Gdn_Plugin {
     const GROUPS_ROUTE = '/groups';
     const GROUP_ROUTE = '/group/';
+    const GROUPS_GROUP_ADD_PERMISSION = 'Groups.Group.Add';
+    const GROUPS_MODERATION_MANAGE_PERMISSION = 'Groups.Moderation.Manage';
+    const GROUPS_EMAIL_INVITATIONS_PERMISSION = 'Groups.EmailInvitations.Add';
 
     /**
      * Database updates.
@@ -43,6 +46,7 @@ class GroupsPlugin extends Gdn_Plugin {
         $sender->addJsFile('vendors/prettify/prettify.js', 'plugins/Groups');
         $sender->addJsFile('dashboard.js', 'plugins/Groups');
     }
+
     /**
      * Load CSS into head for the plugin
      * @param $sender
@@ -64,6 +68,111 @@ class GroupsPlugin extends Gdn_Plugin {
 
         $sender->setData('Title', sprintf(t('%s Settings'), 'Groups'));
         $cf->renderAll();
+    }
+
+    private function discussionModelWhere($requestPath, $args){
+        $wheres = [];
+        if(array_key_exists('Wheres', $args)) {
+            $wheres =  &$args['Wheres'];
+        }
+        if(strpos($requestPath, 'discussions/mine') === 0) {
+            // show all my discussions
+        } else if (strpos($requestPath, 'discussions') === 0) {
+            $wheres['d.GroupID'] = ['is null'];
+        } else if (strpos($requestPath, 'categories/groups') === 0) {
+            //checkPermissions
+            $groupModel = new GroupModel();
+            $userGroups = $groupModel->memberOf(Gdn::session()->UserID);
+            $publicGroupIDs = $groupModel->getAllPublicGroupIDs();
+            $userGroupsIDs = array();
+            foreach ($userGroups as $userGroup) {
+                array_push($userGroupsIDs, $userGroup->GroupID);
+            }
+
+            $showGroupsIDs = array_merge($userGroupsIDs, $publicGroupIDs);
+            $this->log('discussionModelWhere',  ['userGroups' => $userGroups, 'publicGroupsIDs'=> $publicGroupIDs,  'showGroupIDs' => $showGroupsIDs]);
+            $wheres['d.GroupID'] =  $showGroupsIDs;
+        }
+
+    }
+
+    public function discussionModel_beforeGet_handler($sender, $args) {
+        $this->discussionModelWhere(Gdn::request()->path(), $args);
+    }
+
+    public  function discussionModel_beforeGetCount_handler($sender, $args){
+        $this->discussionModelWhere(Gdn::request()->path(), $args);
+    }
+
+    public  function discussionModel_beforeGetAnnouncements_handler($sender, $args){
+        //FIX: it throws exceptions
+        // $this->discussionModelWhere(Gdn::request()->path(), $args);
+    }
+
+    public function discussionController_render_before($sender, $args) {
+        $Discussion = $sender->data('Discussion');
+        if($Discussion && $Discussion->GroupID != null) {
+            $groupModel = new GroupModel();
+            $Group = $groupModel->getByGroupID($Discussion->GroupID);
+            if (!$groupModel->canView($Group)) {
+                throw permissionException();
+            }
+        }
+
+    }
+
+    public function discussionController_discussionOptionsDropdown_handler($sender, $args){
+        $Discussion = $args['Discussion'];
+        if($Discussion) {
+            $groupModel = new GroupModel();
+            $canEdit = $groupModel->canEditDiscussion($Discussion);
+            $canDelete = $groupModel->canDeleteDiscussion($Discussion);
+
+            $canDismiss = $groupModel->canDismissDiscussion($Discussion);
+            $canAnnounce = $groupModel->canAnnounceDiscussion($Discussion);
+            $canSink = $groupModel->canSinkDiscussion($Discussion);
+            $canClose = $groupModel->canCloseDiscussion($Discussion);
+            $canMove = $groupModel->canMoveDiscussion($Discussion);
+            $canRefetch = $groupModel->canRefetchDiscussion($Discussion);
+
+            $options = &$args['DiscussionOptionsDropdown'];
+
+            if ($canDelete === false) {
+                $options->removeItem('delete');
+            }
+
+            if($canEdit === false) {
+                $options->removeItem('edit');
+            }
+
+            if ($canDismiss === false) {
+                $options->removeItem('dismiss');
+            }
+
+            if ($canAnnounce === false) {
+                $options->removeItem('announce');
+            }
+
+            if ($canSink === false) {
+                $options->removeItem('sink');
+            }
+
+            if ($canClose === false) {
+                $options->removeItem('close');
+            }
+
+            if ($canMove === false) {
+                $options->removeItem('move');
+            }
+
+            if ($canRefetch === false) {
+                $options->removeItem('refetch');
+            }
+
+            //$this->log('discussionController_discussionOptionsDropdown_handler', ['Discussion' => $Discussion->DiscussionID,
+            //    'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canDiscmiss' => $canDismiss,
+            //    'canAnnounce' =>$canAnnounce, 'canSink' => $canSink, 'canMove' => $canMove, 'canFetch' => $canRefetch ]);
+        }
     }
 
     public function discussionsController_afterDiscussionFilters_handler($sender){
@@ -106,5 +215,39 @@ class GroupsPlugin extends Gdn_Plugin {
         echo '<li>'. anchor('Groups', GroupsPlugin::GROUPS_ROUTE).'</li>';
     }
 
+    public function log($message, $data) {
+        if (c('Debug')) {
+            Logger::event(
+                'groups_plugin',
+                Logger::INFO,
+                $message,
+                $data
+            );
+        }
+    }
  }
+
+if (!function_exists('groupUrl')) {
+    /**
+     * Return a URL for a group.
+     *
+     * @param object|array $discussion
+     * @param int|string $page
+     * @param bool $withDomain
+     * @return string
+     */
+    function groupUrl($group, $page = '', $withDomain = true) {
+        $groupID = is_numeric($group)? $group : $group->GroupID;
+
+        $result = '/group/'.$groupID;
+
+        if ($page) {
+            if ($page > 1 || Gdn::session()->UserID) {
+                $result .= '/p'.$page;
+            }
+        }
+
+        return url($result, $withDomain);
+    }
+}
 

@@ -15,6 +15,7 @@ $Discussions = $this->data('Discussions');
 $Announcements = $this->data('Announcements');
 $TotalMembers = $this->data('TotalMembers');
 $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
+$groupModel = new GroupModel();
 
 ?>
 <?php echo writeGroupHeader($Group, true, $Owner, $Leaders, $TotalMembers);?>
@@ -24,7 +25,12 @@ $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
         <div class="PageControls">
             <h2 class="H">Announcements</h2>
             <div class="Button-Controls">
-                <?php echo anchor('New Announcement', '/group/announcement/' . $Group->GroupID, 'Button Primary', '');?>
+                <?php
+
+                if($groupModel->canAddAnnouncement($Group)) {
+                    echo anchor('New Announcement', '/group/announcement/' . $Group->GroupID, 'Button Primary', '');
+                }
+                ?>
             </div>
         </div>
        <?php
@@ -43,7 +49,11 @@ $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
         <div class="PageControls">
             <h2 class="H">Discussions</h2>
             <div class="Button-Controls">
-                 <?php echo anchor('New Discussion', '/group/discussion/' . $Group->GroupID, 'Button Primary', '');?>
+                 <?php
+                 if($groupModel->canAddDiscussion($Group)) {
+                     echo anchor('New Discussion', '/group/discussion/' . $Group->GroupID, 'Button Primary', '');
+                 }
+                 ?>
             </div>
         </div>
         <?php
