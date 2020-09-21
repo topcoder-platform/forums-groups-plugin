@@ -375,7 +375,7 @@ class GroupController extends VanillaController {
      */
     public function accept($GroupID, $UserID) {
         $Group = $this->findGroup($GroupID);
-        if(!$this->GroupModel->isMemberOfGroup($UserID, $GroupID)) {
+        if($this->GroupModel->isMemberOfGroup($UserID, $GroupID) !== true) {
             $this->GroupModel->accept($GroupID, $UserID);
         }
         redirectTo(GroupsPlugin::GROUP_ROUTE.$GroupID);
