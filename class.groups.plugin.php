@@ -26,10 +26,27 @@ class GroupsPlugin extends Gdn_Plugin {
 
     /**
      * Run once on enable.
+     * Vanilla Installation setup enables the plugin before setting Garden.Installed=true and
+     * inserting initial data in DB (see setupController_installed_handler)
+     *
      */
     public function setup() {
+        // Initial data hasn't been inserted
+        if(!c('Garden.Installed')) {
+            return;
+        }
         $this->structure();
     }
+
+    /**
+     * Update DB after 'Installed' event
+     * @param $sender
+     * @param $args
+     */
+    public function setupController_installed_handler($sender, $args) {
+        $this->setup();
+    }
+
     /**
      * OnDisable is run whenever plugin is disabled.
      *
