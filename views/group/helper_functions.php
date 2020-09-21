@@ -100,6 +100,8 @@ if (!function_exists('writeGroupMembersWithDetails')) {
      * @return string
      */
     function writeGroupMembersWithDetails($members, $group) {
+        $groupModel = new GroupModel();
+
         foreach ($members as $member) {
             $memberObj = (object)$member;
             $memberID= val('UserID', $memberObj);
@@ -113,14 +115,15 @@ if (!function_exists('writeGroupMembersWithDetails')) {
                 <span class="Options">
                     <div class="Buttons ">
                         <?php
-                            if($memberID != $ownerID) {
-                                if ($role == GroupModel::ROLE_LEADER) {
-                                    echo anchor('Make Member', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_MEMBER . '&memberid=' . $memberID, 'Button MakeMember', '');
-                                } else {
-                                    echo anchor('Make Leader', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_LEADER . '&memberid=' . $memberID, 'Button MakeLeader', '');
+                            if($groupModel->canChangeGroupRole($group)) {
+                                if($memberID != $ownerID) {
+                                    if ($role === GroupModel::ROLE_LEADER) {
+                                        echo anchor('Make Member', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_MEMBER . '&memberid=' . $memberID, 'Button MakeMember', '');
+                                    } else {
+                                        echo anchor('Make Leader', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_LEADER . '&memberid=' . $memberID, 'Button MakeLeader', '');
+                                    }
+                                    echo anchor('Remove', '/group/removemember/' . $groupID . '?memberid=' . $memberID, 'Button DeleteGroupMember', '');
                                 }
-                                echo anchor('Remove', '/group/removemember/'.$groupID.'?memberid='.$memberID,  'Button DeleteGroupMember', '');
-
                             }
                         ?>
                     </div>
