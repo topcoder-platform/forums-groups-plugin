@@ -17,6 +17,10 @@ $SQL = $Database->sql();
 $Construct = $Database->structure();
 $Px = $Database->DatabasePrefix;
 
+//
+// Custom tables
+//
+
 // Role Table
 $Construct->table('Group');
 $GroupTableExists = $Construct->tableExists();
@@ -50,6 +54,11 @@ if(!$UserGroupExists) {
         ->set($Explicit, $Drop);
 }
 
+//
+// Upgrade Vanilla tables
+//
+
+
 $Construct->table('Discussion');
 $DiscussionExists = $Construct->tableExists();
 $GroupIDExists = $Construct->columnExists('GroupID');
@@ -58,6 +67,11 @@ if(!$GroupIDExists) {
     $Construct->column('GroupID', 'int', true, 'key');
     $Construct->set($Explicit, $Drop);
 }
+//
+// Initial Data
+//
+
+// The Groups category with custom permissions
 
 $GroupsCategoryID = null;
 $CategoryExists = $Construct->tableExists();
@@ -66,18 +80,15 @@ if ($SQL->getWhere('Category', ['Name' => 'Groups'])->numRows() == 0) {
         'UpdateUserID' => 1, 'DateInserted' => Gdn_Format::toDateTime(), 'DateUpdated' => Gdn_Format::toDateTime(),
         'Name' => 'Groups', 'UrlCode' => 'groups', 'Description' => 'Group discussions', 'PermissionCategoryID' => -1, 'CanDelete' => 0]);
 
-    // The Groups category with custom permissions
     if($GroupsCategoryID) {
         $SQL->put('Category', ['PermissionCategoryID' => $GroupsCategoryID], ['CategoryID' => $GroupsCategoryID]);
     }
 } else {
-    // The Groups category with custom permissions
     $GroupsCategoryID = $SQL->getWhere('Category', ['Name' => 'Groups'])->firstRow()->CategoryID;
     $SQL->update('Category')
         ->set('PermissionCategoryID', $GroupsCategoryID)
         ->where('CategoryID', $GroupsCategoryID)
         ->put();
-
 }
 
 $PermissionModel = Gdn::permissionModel();
@@ -85,36 +96,56 @@ $RoleModel = new RoleModel();
 $RoleModel->Database = $Database;
 $RoleModel->SQL = $SQL;
 
+// Flush permissions cache & loaded updated schema.
+$PermissionModel->clearPermissions();
+
+// If this is our initial Vanilla setup or the Group plugin
+$PermissionModel->define(['Groups.Group.Add',
+    'Groups.Moderation.Manage',
+    'Groups.EmailInvitations.Add'] );
+// Flush permissions cache & loaded updated schema.
+$PermissionModel->clearPermissions();
+
+// Update global permissions for Administrator roles
 $adminRoles = $RoleModel->getByType(RoleModel::TYPE_ADMINISTRATOR)->resultArray();
 foreach ($adminRoles as $role) {
+    // It returns all permission: global/default category/custom category
     $permissions = $PermissionModel->getPermissions($role['RoleID']);
     foreach ($permissions as $permission) {
-        if((array_key_exists('JunctionID', $permission) && $permission['JunctionID'] == -1) ){
+        Logger::event(
+            'groups_plugin',
+            Logger::INFO,
+            'permissions',
+            ['role' => $role['RoleID'] , 'value' => $permission]
+        );
+        if((array_key_exists('JunctionID', $permission))){
             continue;
         }
-        if((!array_key_exists('JunctionID', $permission) && array_key_exists('PermissionID', $permission)) ) {
+        if(array_key_exists('PermissionID', $permission)) {
             $permission['Groups.Group.Add'] = 1;
             $permission['Groups.Moderation.Manage'] = 0;
             $permission['Groups.EmailInvitations.Add'] = 1;
             $PermissionModel->save($permission);
         }
+
     }
 }
 
+// Update global permissions for Moderator roles
 $moderatorRoles = $RoleModel->getByType(RoleModel::TYPE_MODERATOR)->resultArray();
 foreach ($moderatorRoles as $role) {
+    // It returns all permission: global/default category/custom category
     $permissions = $PermissionModel->getPermissions($role['RoleID']);
     foreach ($permissions as $permission) {
-        if((array_key_exists('JunctionID', $permission) && $permission['JunctionID'] == -1) ){
+        if((array_key_exists('JunctionID', $permission))){
             continue;
         }
-        if(!array_key_exists('JunctionID', $permission) && array_key_exists('PermissionID', $permission)) {
+        if(array_key_exists('PermissionID', $permission)) {
             $permission['Groups.Group.Add'] = 0;
             $permission['Groups.Moderation.Manage'] = 1;
             $permission['Groups.EmailInvitations.Add'] = 0;
             $PermissionModel->save($permission);
         }
-
     }
 }
 
@@ -122,8 +153,8 @@ foreach ($moderatorRoles as $role) {
 $PermissionModel->Database = Gdn::database();
 $PermissionModel->SQL = $SQL;
 
+// Custom Groups category permissions for Administrator/Moderator/Member roles
 $roleTypes = [RoleModel::TYPE_ADMINISTRATOR, RoleModel::TYPE_MODERATOR, RoleModel::TYPE_MEMBER];
-// Create custom permissions for the Groups category
 if ($SQL->getWhere('Permission', ['JunctionTable' => 'Category', 'JunctionID' => $GroupsCategoryID ])->numRows() == 0) {
     foreach ($roleTypes as $roleType) {
         $roles = $RoleModel->getByType($roleType)->resultArray();
@@ -136,7 +167,7 @@ if ($SQL->getWhere('Permission', ['JunctionTable' => 'Category', 'JunctionID' =>
                 'Vanilla.Discussions.View' => 1,
                 'Vanilla.Discussions.Add' => 1,
                 'Vanilla.Discussions.Edit' => 1,
-                'Vanilla.Discussions.Announce' => 1, // Must be 1. Member might be a leader of the Group. Need this permission to create announcements.
+                'Vanilla.Discussions.Announce' => 1, // Must be 1. Member role might be a leader of the Group. This permission is required to create announcements.
                 'Vanilla.Discussions.Sink' =>  $role['Type'] == RoleModel::TYPE_MODERATOR ||  $role['Type'] == RoleModel::TYPE_ADMINISTRATOR ? 1 : 0,
                 'Vanilla.Discussions.Close' => $role['Type'] == RoleModel::TYPE_MODERATOR ||  $role['Type'] == RoleModel::TYPE_ADMINISTRATOR ? 1 : 0,
                 'Vanilla.Discussions.Delete' => 1,

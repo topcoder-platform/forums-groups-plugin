@@ -26,10 +26,27 @@ class GroupsPlugin extends Gdn_Plugin {
 
     /**
      * Run once on enable.
+     * Vanilla Installation setup enables the plugin before setting Garden.Installed=true and
+     * inserting initial data in DB (see setupController_installed_handler)
+     *
      */
     public function setup() {
+        // Initial data hasn't been inserted
+        if(!c('Garden.Installed')) {
+            return;
+        }
         $this->structure();
     }
+
+    /**
+     * Update DB after 'Installed' event
+     * @param $sender
+     * @param $args
+     */
+    public function setupController_installed_handler($sender, $args) {
+        $this->setup();
+    }
+
     /**
      * OnDisable is run whenever plugin is disabled.
      *
@@ -121,7 +138,22 @@ class GroupsPlugin extends Gdn_Plugin {
 
     }
 
-    public function discussionController_discussionOptionsDropdown_handler($sender, $args){
+    public function base_BeforeCommentForm_handler($sender, $args) {
+        if($sender instanceof DiscussionController &&  $sender->Form->Action === '/post/comment/') {
+            $categoryID = $sender->data('Discussion.CategoryID');
+            $groupID = $sender->data('Discussion.GroupID');
+            $groupModel = new GroupModel();
+            if(!$groupModel->canAddComment($categoryID, $groupID)) {
+                $cssClass = &$args['FormCssClass'];
+                $cssClass = 'hidden';
+            }
+        }
+    }
+
+    /**
+     * The '...' discussion dropdown options
+     */
+    public function base_discussionOptionsDropdown_handler($sender, $args){
         $Discussion = $args['Discussion'];
         if($Discussion) {
             $groupModel = new GroupModel();

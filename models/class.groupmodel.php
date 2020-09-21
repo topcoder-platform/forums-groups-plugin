@@ -722,6 +722,30 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
+     *  Check announce group discusion permission
+     *
+     */
+    public function canAddComment($categoryID, $groupID) {
+        $canAddComment =  CategoryModel::checkPermission($categoryID, 'Vanilla.Comments.Add', true);
+        if(!$groupID ) {
+            return $canAddComment;
+        }
+
+        if($canAddComment === false) {
+            return $canAddComment;
+        }
+
+        $group = $this->getByGroupID($groupID);
+        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+        $groupRole = val('Role', $result, null);
+        if($groupRole || Gdn::session()->UserID === $group->OwnerID
+            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      *  Check sink group discusion permission
      *
      */
