@@ -150,7 +150,10 @@ class GroupsPlugin extends Gdn_Plugin {
         }
     }
 
-    public function discussionController_discussionOptionsDropdown_handler($sender, $args){
+    /**
+     * The '...' discussion dropdown options
+     */
+    public function base_discussionOptionsDropdown_handler($sender, $args){
         $Discussion = $args['Discussion'];
         if($Discussion) {
             $groupModel = new GroupModel();
