@@ -138,6 +138,18 @@ class GroupsPlugin extends Gdn_Plugin {
 
     }
 
+    public function base_BeforeCommentForm_handler($sender, $args) {
+        if($sender instanceof DiscussionController &&  $sender->Form->Action === '/post/comment/') {
+            $categoryID = $sender->data('Discussion.CategoryID');
+            $groupID = $sender->data('Discussion.GroupID');
+            $groupModel = new GroupModel();
+            if(!$groupModel->canAddComment($categoryID, $groupID)) {
+                $cssClass = &$args['FormCssClass'];
+                $cssClass = 'hidden';
+            }
+        }
+    }
+
     public function discussionController_discussionOptionsDropdown_handler($sender, $args){
         $Discussion = $args['Discussion'];
         if($Discussion) {
