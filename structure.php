@@ -37,10 +37,27 @@ if (!$GroupTableExists) {
         ->column('Icon', 'varchar(255)', true)
         ->column('Banner', 'varchar(255)', true)
         ->column('OwnerID', 'int', false, 'key')
-        ->column('ChallengeID', 'int', true, 'key')
-        ->column('ChallengeLink', 'varchar(255)', true)
+        ->column('ChallengeID', 'varchar(36)', true )
+        ->column('ChallengeUrl', 'varchar(255)', true)
         ->set($Explicit, $Drop);
+} else {
+    // Updated columns if the table exist. It can be removed after deploying
+    $Construct
+        ->primaryKey('GroupID')
+        ->column('Name', 'varchar(100)')
+        ->column('Description', 'varchar(500)', true)
+        ->column('Type', [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE, GroupModel::TYPE_SECRET], true)
+        ->column('Deletable', 'tinyint(1)', '1')
+        ->column('Closed', 'tinyint(1)', '0')
+        ->column('DateInserted', 'datetime', false, 'index')
+        ->column('Icon', 'varchar(255)', true)
+        ->column('Banner', 'varchar(255)', true)
+        ->column('OwnerID', 'int', false, 'key')
+        ->column('ChallengeID', 'varchar(36)', true )
+        ->column('ChallengeUrl', 'varchar(255)', true)
+        ->set(true, false);
 }
+
 
 // User Group Table
 $Construct->table('UserGroup');

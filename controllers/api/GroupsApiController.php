@@ -18,6 +18,9 @@ class GroupsApiController extends AbstractApiController {
     /** @var GroupModel */
     private $groupModel;
 
+    /** @var CategoryModel */
+    private $categoryModel;
+
     /** @var Schema */
     private $groupSchema;
 
@@ -32,9 +35,10 @@ class GroupsApiController extends AbstractApiController {
      * @param UserMetaModel $userMetaModel
      * @param GroupModel $groupModel
      */
-    public function __construct(UserMetaModel $userMetaModel, GroupModel $groupModel) {
+    public function __construct(UserMetaModel $userMetaModel, GroupModel $groupModel, CategoryModel $categoryModel) {
         $this->userMetaModel = $userMetaModel;
         $this->groupModel = $groupModel;
+        $this->categoryModel = $categoryModel;
     }
 
     /**
@@ -47,7 +51,7 @@ class GroupsApiController extends AbstractApiController {
         $this->permission();
 
         $in = $this->schema([
-            'challengeID:i?' => [
+            'challengeID:s?' => [
                 'description' => 'Filter by Topcoder challenge ID.',
                 'x-filter' => [
                     'field' => 'ChallengeID'
@@ -108,6 +112,22 @@ class GroupsApiController extends AbstractApiController {
     }
 
     /**
+     * Get The GroupsCategory
+     *
+     */
+    public function get_category() {
+        $this->permission();
+        $category = $this->categoryModel->getByCode('groups');
+        if (!$category) {
+            throw new NotFoundException('Category');
+        }
+        $out = $this->schema($this->schemaCategory(), 'out');
+        $result = $out->validate($this->categoryModel->getID($category->CategoryID, DATASET_TYPE_ARRAY));
+        return $result;
+    }
+
+
+    /**
      * Add a group.
      *
      * @param array $body The request body.
@@ -116,7 +136,7 @@ class GroupsApiController extends AbstractApiController {
      */
     public function post(array $body) {
         $this->permission(GroupsPlugin::GROUPS_GROUP_ADD_PERMISSION);
-        $in = $this->groupPostSchema('in')->setDescription('Add a group.');
+        $in = $this->groupPostSchema()->setDescription('Add a group.');
         $out = $this->groupSchema('out');
         $body = $in->validate($body);
         $groupData = ApiUtils::convertInputKeys($body);
@@ -196,6 +216,26 @@ class GroupsApiController extends AbstractApiController {
         $this->groupModel->removeMember($group->GroupID, $user->UserID);
     }
 
+
+     /**
+     * Get a category schema.
+     *
+     * @param bool $expand
+     * @return Schema
+     */
+    public function schemaCategory() {
+        return Schema::parse([
+            'categoryID:i' => 'The ID of the category.',
+            'name:s' => 'The name of the category.',
+            'description:s|n' => [
+                'description' => 'The description of the category.',
+                'minLength' => 0,
+            ],
+            'parentCategoryID:i|n' => 'Parent category ID.',
+            'urlcode:s' => 'The URL code of the category.',
+           ]);
+    }
+
     /**
      * Get a post schema with minimal add/edit fields.
      *
@@ -252,22 +292,16 @@ class GroupsApiController extends AbstractApiController {
      * @param string $type The type of schema.
      * @return Schema Returns a schema object.
      */
-    public function groupPostSchema($type = '') {
-        if ($this->groupPostSchema === null) {
-            $this->groupPostSchema = $this->schema(
-                Schema::parse([
-                    'type:s' =>  [
-                            'enum' => [GroupModel::TYPE_SECRET, GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE],
-                            'description' => 'Type of the group'],
-                    'description:s' => 'Description of the group',
-                    'name:s' => 'The name of the group.',
-                    'challengeID:i?' => 'The challengeID of the Topcoder challenge.',
-                    'challengeLink:s?' => 'The challengeLink of the Topcoder challenge.',
-                ]),
-                'GroupPost'
-            );
-        }
-        return $this->schema($this->groupPostSchema, $type);
+    public function groupPostSchema() {
+      return  $this->schema(Schema::parse([
+            'name:s' => 'The name of the group.',
+            'type:s' =>             [
+                'enum' => [GroupModel::TYPE_SECRET, GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE],
+                'description' => 'Type of the group'],
+            'description:s' => 'Description of the group',
+            'challengeID:s?' => 'The challengeID of the Topcoder challenge.',
+            'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
+        ]), 'GroupPost');
     }
 
 
@@ -281,8 +315,8 @@ class GroupsApiController extends AbstractApiController {
             'groupID:i' => 'The ID of the group.',
             'type:s' => 'Type of the group',
             'name:s' => 'The name of the group.',
-            'challengeID:i?' => 'The challengeID of the Topcoder challenge.',
-            'challengeLink:s?' => 'The challengeLink of the Topcoder challenge.',
+            'challengeID:s?' => 'The challengeID of the Topcoder challenge.',
+            'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
         ]);
     }
 

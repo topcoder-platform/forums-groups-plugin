@@ -11,7 +11,7 @@ paths:
         in: query
         name: challengeID
         schema:
-          type: integer
+          type: string
         x-filter:
           field: ChallengeID
       - description: |
@@ -62,6 +62,45 @@ paths:
       requestBody:
         $ref: '#/components/requestBodies/GroupPost'
       summary: Add a group.
+  /groups/category:
+    get:
+      responses:
+        '200':
+          content:
+            'application/json':
+              schema:
+                properties:
+                  categoryID:
+                    description: The ID of the category.
+                    type: integer
+                  description:
+                    description: The description of the category.
+                    minLength: 0
+                    nullable: true
+                    type: string
+                  name:
+                    description: The name of the category.
+                    minLength: 1
+                    type: string
+                  parentCategoryID:
+                    description: Parent category ID.
+                    nullable: true
+                    type: integer
+                  urlcode:
+                    description: The URL code of the category.
+                    minLength: 1
+                    type: string
+                required:
+                  - categoryID
+                  - name
+                  - description
+                  - parentCategoryID
+                  - urlcode
+                type: object
+          description: Success
+      tags:
+        - Groups
+      summary: Get a category.
   '/groups/{id}':
      get:
       parameters:
@@ -142,8 +181,8 @@ components:
           description: The challengeID of the Topcoder challenge.
           nullable: true
           type: integer
-        challengeLink:
-          description: The link of the Topcoder challenge.
+        challengeUrl:
+          description: The url of the Topcoder challenge.
           minLength: 1
           type: string
         name:
@@ -162,7 +201,7 @@ components:
       - type
       - name
       - challengeID
-      - challengeLink
+      - challengeUrl
       type: object
     GroupPost:
       properties:
@@ -184,16 +223,16 @@ components:
           type: string
         challengeID:
           description: The ID of the Topcoder challenge.
-          type: integer
-        challengeLink:
-          description: The link of the Topcoder challenge.
+          type: string
+        challengeUrl:
+          description: The url of the Topcoder challenge.
           type: string
       required:
         - name
         - type
         - description
         - challengeID
-        - challengeLink
+        - challengeUrl
       type: object
     GroupMemberPost:
       description: Add a member to a group
