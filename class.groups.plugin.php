@@ -282,4 +282,26 @@ if (!function_exists('groupUrl')) {
         return url($result, $withDomain);
     }
 }
+if (!function_exists('wrapCheckOrRadio')) {
+    function wrapCheckOrRadio($fieldName, $labelCode, $listOptions, $attributes = [])
+    {
+        $form = Gdn::controller()->Form;
 
+        if (count($listOptions) == 2 && array_key_exists(0, $listOptions)) {
+            unset($listOptions[0]);
+            $value = array_pop(array_keys($listOptions));
+
+            // This can be represented by a checkbox.
+            return $form->checkBox($fieldName, $labelCode);
+        } else {
+            $cssClass = val('ListClass', $attributes, 'List Inline');
+
+            $result = ' <b>' . t($labelCode) . "</b> <ul class=\"$cssClass\">";
+            foreach ($listOptions as $value => $code) {
+                $result .= ' <li>' . $form->radio($fieldName, $code, ['Value' => $value, 'class' => 'radio-inline']) . '</li> ';
+            }
+            $result .= '</ul>';
+            return $result;
+        }
+    }
+}

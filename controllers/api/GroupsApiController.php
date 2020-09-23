@@ -112,22 +112,6 @@ class GroupsApiController extends AbstractApiController {
     }
 
     /**
-     * Get The GroupsCategory
-     *
-     */
-    public function get_category() {
-        $this->permission();
-        $category = $this->categoryModel->getByCode('groups');
-        if (!$category) {
-            throw new NotFoundException('Category');
-        }
-        $out = $this->schema($this->schemaCategory(), 'out');
-        $result = $out->validate($this->categoryModel->getID($category->CategoryID, DATASET_TYPE_ARRAY));
-        return $result;
-    }
-
-
-    /**
      * Add a group.
      *
      * @param array $body The request body.
@@ -214,26 +198,6 @@ class GroupsApiController extends AbstractApiController {
         }
 
         $this->groupModel->removeMember($group->GroupID, $user->UserID);
-    }
-
-
-     /**
-     * Get a category schema.
-     *
-     * @param bool $expand
-     * @return Schema
-     */
-    public function schemaCategory() {
-        return Schema::parse([
-            'categoryID:i' => 'The ID of the category.',
-            'name:s' => 'The name of the category.',
-            'description:s|n' => [
-                'description' => 'The description of the category.',
-                'minLength' => 0,
-            ],
-            'parentCategoryID:i|n' => 'Parent category ID.',
-            'urlcode:s' => 'The URL code of the category.',
-           ]);
     }
 
     /**

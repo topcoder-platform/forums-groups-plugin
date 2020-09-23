@@ -90,23 +90,6 @@ if(!$GroupIDExists) {
 
 // The Groups category with custom permissions
 
-$GroupsCategoryID = null;
-$CategoryExists = $Construct->tableExists();
-if ($SQL->getWhere('Category', ['Name' => 'Groups'])->numRows() == 0) {
-    $GroupsCategoryID =$SQL->insert('Category', ['ParentCategoryID' => -1, 'TreeLeft' => 2, 'TreeRight' => 3, 'Depth' => 1, 'InsertUserID' => 1,
-        'UpdateUserID' => 1, 'DateInserted' => Gdn_Format::toDateTime(), 'DateUpdated' => Gdn_Format::toDateTime(),
-        'Name' => 'Groups', 'UrlCode' => 'groups', 'Description' => 'Group discussions', 'PermissionCategoryID' => -1, 'CanDelete' => 0]);
-
-    if($GroupsCategoryID) {
-        $SQL->put('Category', ['PermissionCategoryID' => $GroupsCategoryID], ['CategoryID' => $GroupsCategoryID]);
-    }
-} else {
-    $GroupsCategoryID = $SQL->getWhere('Category', ['Name' => 'Groups'])->firstRow()->CategoryID;
-    $SQL->update('Category')
-        ->set('PermissionCategoryID', $GroupsCategoryID)
-        ->where('CategoryID', $GroupsCategoryID)
-        ->put();
-}
 
 $PermissionModel = Gdn::permissionModel();
 $RoleModel = new RoleModel();
@@ -170,37 +153,35 @@ foreach ($moderatorRoles as $role) {
 $PermissionModel->Database = Gdn::database();
 $PermissionModel->SQL = $SQL;
 
-// Custom Groups category permissions for Administrator/Moderator/Member roles
+// Update default category permissions for Administrator/Moderator/Member roles
 $roleTypes = [RoleModel::TYPE_ADMINISTRATOR, RoleModel::TYPE_MODERATOR, RoleModel::TYPE_MEMBER];
-if ($SQL->getWhere('Permission', ['JunctionTable' => 'Category', 'JunctionID' => $GroupsCategoryID ])->numRows() == 0) {
-    foreach ($roleTypes as $roleType) {
-        $roles = $RoleModel->getByType($roleType)->resultArray();
-        foreach ($roles as $role) {
-            $GroupsCategoryPermission = [
-                'RoleID' => $role['RoleID'],
-                'JunctionTable' => 'Category',
-                'JunctionColumn' => 'PermissionCategoryID',
-                'JunctionID' => $GroupsCategoryID,
-                'Vanilla.Discussions.View' => 1,
-                'Vanilla.Discussions.Add' => 1,
-                'Vanilla.Discussions.Edit' => 1,
-                'Vanilla.Discussions.Announce' => 1, // Must be 1. Member role might be a leader of the Group. This permission is required to create announcements.
-                'Vanilla.Discussions.Sink' =>  $role['Type'] == RoleModel::TYPE_MODERATOR ||  $role['Type'] == RoleModel::TYPE_ADMINISTRATOR ? 1 : 0,
-                'Vanilla.Discussions.Close' => $role['Type'] == RoleModel::TYPE_MODERATOR ||  $role['Type'] == RoleModel::TYPE_ADMINISTRATOR ? 1 : 0,
-                'Vanilla.Discussions.Delete' => 1,
-                'Vanilla.Comments.Add' => 1,
-                'Vanilla.Comments.Edit' => 0,
-                'Vanilla.Comments.Delete' => 0
-            ];
-            $PermissionModel->save($GroupsCategoryPermission, true);
+
+foreach ($roleTypes as $roleType) {
+    $roles = $RoleModel->getByType($roleType)->resultArray();
+    foreach ($roles as $role) {
+        $permissions = $PermissionModel->getPermissions($role['RoleID']);
+        foreach ($permissions as $permission) {
+            Logger::event(
+                'groups_plugin',
+                Logger::INFO,
+                'permissions:updated',
+                ['role' => $role['RoleID'] , 'value' => $permission]
+            );
+            if(array_key_exists('PermissionID', $permission)) {
+                $permission['Vanilla.Discussions.View'] = 1;
+                $permission['Vanilla.Discussions.Add'] =  1;
+                $permission['Vanilla.Discussions.Edit'] = 1;
+                $permission['Vanilla.Discussions.Announce'] = 1; // Must be 1. Member role might be a leader of the Group. This permission is required to create announcements.
+                $permission['Vanilla.Discussions.Sink'] =  $role['Type'] == RoleModel::TYPE_MODERATOR ||  $role['Type'] == RoleModel::TYPE_ADMINISTRATOR ? 1 : 0;
+                $permission['Vanilla.Discussions.Close'] = $role['Type'] == RoleModel::TYPE_MODERATOR ||  $role['Type'] == RoleModel::TYPE_ADMINISTRATOR ? 1 : 0;
+                $permission['Vanilla.Discussions.Delete'] = $role['Type'] == RoleModel::TYPE_MODERATOR ||  $role['Type'] == RoleModel::TYPE_ADMINISTRATOR ? 1 : 0;
+                $permission['Vanilla.Comments.Add'] = 1;
+                $permission['Vanilla.Comments.Edit'] = 0;
+                $permission['Vanilla.Comments.Delete'] = 0;
+                $PermissionModel->save($permission);
+            }
         }
     }
-}
-
-if ($CategoryExists) {
-    CategoryModel::instance()->rebuildTree();
-    CategoryModel::instance()->recalculateTree();
-    unset($CategoryModel);
 }
 
 // Force the user permissions to refresh.

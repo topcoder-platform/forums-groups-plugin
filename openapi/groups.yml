@@ -62,45 +62,6 @@ paths:
       requestBody:
         $ref: '#/components/requestBodies/GroupPost'
       summary: Add a group.
-  /groups/category:
-    get:
-      responses:
-        '200':
-          content:
-            'application/json':
-              schema:
-                properties:
-                  categoryID:
-                    description: The ID of the category.
-                    type: integer
-                  description:
-                    description: The description of the category.
-                    minLength: 0
-                    nullable: true
-                    type: string
-                  name:
-                    description: The name of the category.
-                    minLength: 1
-                    type: string
-                  parentCategoryID:
-                    description: Parent category ID.
-                    nullable: true
-                    type: integer
-                  urlcode:
-                    description: The URL code of the category.
-                    minLength: 1
-                    type: string
-                required:
-                  - categoryID
-                  - name
-                  - description
-                  - parentCategoryID
-                  - urlcode
-                type: object
-          description: Success
-      tags:
-        - Groups
-      summary: Get a category.
   '/groups/{id}':
      get:
       parameters:
