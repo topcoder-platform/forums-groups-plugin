@@ -19,6 +19,8 @@ class GroupController extends VanillaController {
     /** @var array Models to include. */
     public $Uses = ['Form', 'Database', 'GroupModel'];
 
+    /** @var bool Whether or not to show the category dropdown. */
+    public $ShowCategorySelector = true;
 
     public function __construct() {
         parent::__construct();
@@ -524,6 +526,7 @@ class GroupController extends VanillaController {
      * @throws Gdn_UserException
      */
     public function announcement($GroupID=''){
+
         $Group = $this->findGroup($GroupID);
 
         if(!$this->GroupModel->canAddAnnouncement($Group)) {
@@ -534,7 +537,7 @@ class GroupController extends VanillaController {
             [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
                 ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Announcement')]]);
         $this->title('New Announcement');
-        $this->setDiscussionData($Group, true);
+        $this->setDiscussionData($Group, 2);
         $this->View = 'discussion';
         $this->render();
     }
@@ -554,10 +557,142 @@ class GroupController extends VanillaController {
         $this->setData('Breadcrumbs',   [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Discussion')]]);
         $this->title('New Discussion');
-        $this->setDiscussionData($Group, false);
+        $this->setDiscussionData($Group, 1);
         $this->View = 'discussion';
         $this->render();
 
+    }
+    /**
+     * Create a discussion.
+     * @param int $categoryID Unique ID of the category to add the discussion to.
+     */
+    public function setDiscussionData($Group,$Announce = '0') {
+        $categoryUrlCode =$Group->ChallengeID;//.'-questions';
+        $useCategories = true;
+
+        // Setup head
+        $this->addJsFile('jquery.autosize.min.js');
+        $this->addJsFile('autosave.js');
+        $this->addJsFile('post.js');
+
+        $session = Gdn::session();
+
+        Gdn_Theme::section('PostDiscussion');
+
+        // Set discussion, draft, and category data
+        $discussionID = isset($this->Discussion) ? $this->Discussion->DiscussionID : '';
+        $draftID = isset($this->Draft) ? $this->Draft->DraftID : 0;
+        $category = false;
+        $categoryModel = new CategoryModel();
+        $category = CategoryModel::categories($categoryUrlCode);
+        if ($category) {
+            $this->CategoryID = val('CategoryID', $category);
+        }
+
+        if ($category) {
+            $this->Category = (object)$category;
+            $this->setData('Category', $category);
+            $this->Form->addHidden('CategoryID', $this->Category->CategoryID);
+        }
+
+        $categoryData = $this->ShowCategorySelector ? CategoryModel::categories() : false;
+        if (!$useCategories || $this->ShowCategorySelector) {
+            // See if we should fill the CategoryID value.
+            $allowedCategories = CategoryModel::getByPermission(
+                'Discussions.Add',
+                $this->Form->getValue('CategoryID', $this->CategoryID),
+                ['Archived' => 0, 'AllowDiscussions' => 1],
+                ['AllowedDiscussionTypes' => $this->Data['Type']]
+            );
+            $allowedCategoriesCount = count($allowedCategories);
+
+            if ($this->ShowCategorySelector && $allowedCategoriesCount === 1) {
+                $this->ShowCategorySelector = false;
+            }
+
+            if (!$this->ShowCategorySelector && $allowedCategoriesCount) {
+                $allowedCategory = array_pop($allowedCategories);
+                $this->Form->addHidden('CategoryID', $allowedCategory['CategoryID']);
+
+                if ($this->Form->isPostBack() && !$this->Form->getFormValue('CategoryID')) {
+                    $this->Form->setFormValue('CategoryID', $allowedCategory['CategoryID']);
+                }
+            }
+        }
+
+        // Set the model on the form
+        $DiscussionModel = new DiscussionModel();
+        $this->Form->setModel($DiscussionModel);
+        $this->Form->addHidden('GroupID', $Group->GroupID);
+        $this->Form->Action = '/post/discussion';
+        $this->Form->setFormValue('Announce', $Announce);
+        $this->setData('Group', $Group);
+        $this->setData('Announce', $Announce);
+        $this->setData('_AnnounceOptions', $this->announceOptions());
+
+        $this->fireEvent('BeforeDiscussionRender');
+
+        if ($this->CategoryID) {
+            $breadcrumbs = CategoryModel::getAncestors($this->CategoryID);
+        } else {
+            $breadcrumbs = [];
+        }
+
+        $breadcrumbs[] = [
+            'Name' => $this->data('Title'),
+            'Url' => val('AddUrl', val($this->data('Type'), DiscussionModel::discussionTypes()), '/post/discussion')
+        ];
+
+        $this->setData('Breadcrumbs', $breadcrumbs);
+
+    }
+
+    /**
+     * Get available announcement options for discussions.
+     *
+     *
+     * @return array
+     */
+    public function announceOptions() {
+        $result = [
+            '0' => '@'.t("Don't announce.")
+        ];
+
+        if (c('Vanilla.Categories.Use')) {
+            $result = array_replace($result, [
+                '2' => '@'.sprintf(t('In <b>%s.</b>'), t('the category')),
+                '1' => '@'.sprintf(sprintf(t('In <b>%s</b> and recent discussions.'), t('the category'))),
+            ]);
+        } else {
+            $result = array_replace($result, [
+                '1' => '@'.t('In recent discussions.'),
+            ]);
+        }
+
+        return $result;
+    }
+
+
+    /**
+     * Pre-populate the form with values from the query string.
+     *
+     * @param Gdn_Form $form
+     * @param bool $LimitCategories Whether to turn off the category dropdown if there is only one category to show.
+     */
+    protected function populateForm($form) {
+        $get = $this->Request->get();
+        $get = array_change_key_case($get);
+        $values = arrayTranslate($get, ['name' => 'Name', 'tags' => 'Tags', 'body' => 'Body']);
+        foreach ($values as $key => $value) {
+            $form->setValue($key, $value);
+        }
+
+        if (isset($get['category'])) {
+            $category = CategoryModel::categories($get['category']);
+            if ($category && $category['PermsDiscussionsAdd']) {
+                $form->setValue('CategoryID', $category['CategoryID']);
+            }
+        }
     }
 
     /**
@@ -577,35 +712,6 @@ class GroupController extends VanillaController {
 
         return $Group;
     }
-
-
-    private function setDiscussionData($Group, $isAnnouncement) {
-        $announce = 0; // It's created in the category
-        if($isAnnouncement === true) {
-            // User has to have 'Vanilla.Discussions.Announce' for Groups Category
-            $announce = 2;
-        }
-
-        $this->addJsFile('jquery.autosize.min.js');
-        $this->addJsFile('autosave.js');
-        $this->addJsFile('post.js');
-
-        $currentFormName = "discussion";
-        $this->setData('CurrentFormName', $currentFormName);
-        $this->setData('Announce', $announce);
-        $this->setData('Group', $Group);
-        $categoryModel = new CategoryModel();
-        $category = $categoryModel->getByCode('groups');
-        $this->setData('Category', $category);
-        $categoryID = val('CategoryID', $category);
-        $this->Form->Action = '/post/discussion?categoryUrlCode=groups';
-        $this->Form->addHidden('GroupID', $Group->GroupID);
-        $this->Form->addHidden('Announce', $announce);
-        $this->Form->addHidden('CategoryID', $categoryID);
-
-        $this->fireEvent('AfterForms');
-    }
-
 
     public function log($message, $data) {
         if (c('Debug')) {
