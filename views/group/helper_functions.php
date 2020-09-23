@@ -193,6 +193,12 @@ if (!function_exists('writeGroupHeader')) {
                 <?php if($showDetails) { ?>
                 <div class="Group-Description userContent"><?php  echo  $group->Description; ?></div>
                 <div class="Meta Group-Meta Group-Info">
+                    <?php if($group->ChallengeUrl) { ?>
+                    <span class="MItem ">
+                        <span class="label">Challenge: </span>
+                        <span class="value"><?php echo anchor($group->Name, $group->ChallengeUrl);?></span>
+                    </span>
+                    <?php } ?>
                     <span class="MItem ">
                         <span class="label">Owner: </span>
                         <span class="value"><?php echo userAnchor($owner, 'Username');?></span>

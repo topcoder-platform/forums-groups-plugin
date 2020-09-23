@@ -64,6 +64,22 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
+     * Get max pages
+     * @return int
+     */
+    public function getMaxPages() {
+        return (int)c('Vanilla.Groups.MaxPages')? : 100;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function getDefaultLimit() {
+        return c('Vanilla.Groups.PerPage', 30);
+    }
+
+
+    /**
      * Default Gdn_Model::get() behavior.
      *
      * Prior to 2.0.18 it incorrectly behaved like GetID.
@@ -222,8 +238,10 @@ class GroupModel extends Gdn_Model {
      */
     public function join($GroupID, $UserID){
         $Fields = ['Role' => GroupModel::ROLE_MEMBER, 'GroupID' => $GroupID,'UserID' => $UserID, 'DateInserted' => Gdn_Format::toDateTime()];
-        $this->SQL->insert('UserGroup', $Fields);
-        $this->notifyJoinGroup($GroupID, $UserID);
+        if( $this->SQL->getWhere('UserGroup', ['GroupID' => $GroupID,'UserID' => $UserID])->numRows() == 0) {
+            $this->SQL->insert('UserGroup', $Fields);
+            $this->notifyJoinGroup($GroupID, $UserID);
+        }
     }
 
     /**

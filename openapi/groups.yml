@@ -1,0 +1,245 @@
+openapi: 3.0.2
+info:
+  title: Topcoder Groups API
+  description: Topcoder Groups API
+  version: 1.0.0
+paths:
+  /groups:
+    get:
+      parameters:
+      - description: Filter by challengeID.
+        in: query
+        name: challengeID
+        schema:
+          type: string
+        x-filter:
+          field: ChallengeID
+      - description: |
+          Filter by group type.
+        in: query
+        name: type
+        schema:
+          type: string
+          default: public
+          enum:
+          - public
+          - private
+          - secret
+        x-filter:
+          field: Type
+      - $ref: '#/components/parameters/Page'
+      - description: |
+          Desired number of items per page.
+        in: query
+        name: limit
+        schema:
+          type: integer
+          default: 30
+          maximum: 100
+          minimum: 1
+      responses:
+        '200':
+          content:
+            'application/json':
+              schema:
+                items:
+                  $ref: '#/components/schemas/Group'
+                type: array
+          description: Success
+      tags:
+      - Groups
+      summary: List groups.
+    post:
+      responses:
+        '201':
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: Success
+      tags:
+        - Groups
+      requestBody:
+        $ref: '#/components/requestBodies/GroupPost'
+      summary: Add a group.
+  /groups/category:
+    get:
+      responses:
+        '200':
+          content:
+            'application/json':
+              schema:
+                properties:
+                  categoryID:
+                    description: The ID of the category.
+                    type: integer
+                  description:
+                    description: The description of the category.
+                    minLength: 0
+                    nullable: true
+                    type: string
+                  name:
+                    description: The name of the category.
+                    minLength: 1
+                    type: string
+                  parentCategoryID:
+                    description: Parent category ID.
+                    nullable: true
+                    type: integer
+                  urlcode:
+                    description: The URL code of the category.
+                    minLength: 1
+                    type: string
+                required:
+                  - categoryID
+                  - name
+                  - description
+                  - parentCategoryID
+                  - urlcode
+                type: object
+          description: Success
+      tags:
+        - Groups
+      summary: Get a category.
+  '/groups/{id}':
+     get:
+      parameters:
+      - description: |
+          The group ID.
+        in: path
+        name: id
+        required: true
+        schema:
+          type: integer
+      responses:
+        '200':
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: Success
+      tags:
+      - Groups
+      summary: Get a group.
+  '/groups/{id}/members/{userid}':
+    delete:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - description: The Vanilla User ID.
+          in: path
+          name: userid
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Success
+      tags:
+        - Groups
+      summary: Remove a user from a group.
+  '/groups/{id}/members':
+    post:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Success
+      tags:
+        - Groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupMemberPost'
+        required: true
+      summary: Add member to a group.
+components:
+  requestBodies:
+    GroupPost:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GroupPost'
+      required: true
+  schemas:
+    Group:
+      properties:
+        groupID:
+          description: The groupID of the group.
+          type: integer
+        challengeID:
+          description: The challengeID of the Topcoder challenge.
+          nullable: true
+          type: integer
+        challengeUrl:
+          description: The url of the Topcoder challenge.
+          minLength: 1
+          type: string
+        name:
+          description: The name of the group.
+          minLength: 1
+          type: string
+        type:
+          description: The type of this group
+          minLength: 1
+          enum:
+          - public
+          - private
+          - secret
+      required:
+      - groupID
+      - type
+      - name
+      - challengeID
+      - challengeUrl
+      type: object
+    GroupPost:
+      properties:
+        name:
+          description: The name of the group.
+          minLength: 1
+          type: string
+        type:
+          type: string
+          description: The type of the group
+          minLength: 1
+          enum:
+          - public
+          - private
+          - secret
+        description:
+          description: The description of the group.
+          minLength: 1
+          type: string
+        challengeID:
+          description: The ID of the Topcoder challenge.
+          type: string
+        challengeUrl:
+          description: The url of the Topcoder challenge.
+          type: string
+      required:
+        - name
+        - type
+        - description
+        - challengeID
+        - challengeUrl
+      type: object
+    GroupMemberPost:
+      description: Add a member to a group
+      properties:
+        userID:
+          description: The Vanilla user ID
+          type: integer
+      required:
+        - userID
+      type: object
