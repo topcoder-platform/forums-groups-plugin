@@ -112,7 +112,7 @@ class GroupController extends VanillaController {
 
         if ($this->Form->authenticatedPostBack()) {
             if ($this->Form->errorCount() == 0) {
-                $this->GroupModel->delete($Group->GroupID);
+                $this->GroupModel->deleteID($Group->GroupID);
                 $this->setRedirectTo(GroupsPlugin::GROUPS_ROUTE);
             }
         }
