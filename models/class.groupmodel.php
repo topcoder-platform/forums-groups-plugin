@@ -437,8 +437,8 @@ class GroupModel extends Gdn_Model {
      * @return bool Returns **true** on success or **false** otherwise.
      */
     public function deleteID($groupID, $options = []) {
-        $this->SQL->delete('UserGroup', ['RoleID' => $groupID]);
-        return $this->SQL->delete('Group', ['RoleID' => $groupID]);
+        $this->SQL->delete('UserGroup', ['GroupID' => $groupID]);
+        return $this->SQL->delete('Group', ['GroupID' => $groupID]);
     }
 
     /**
