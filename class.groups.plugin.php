@@ -134,6 +134,7 @@ class GroupsPlugin extends Gdn_Plugin {
             if (!$groupModel->canView($Group)) {
                 throw permissionException();
             }
+            $sender->setData('Group', $Group);
         }
 
     }
@@ -241,6 +242,56 @@ class GroupsPlugin extends Gdn_Plugin {
         } else {
             $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$discussion->GroupID);
         }
+    }
+
+    /**
+     * Add Topcoder Roles
+     * @param $sender
+     * @param $args
+     */
+    public function base_userAnchor_handler($sender, $args){
+        if($sender instanceof DiscussionController || $sender instanceof GroupController) {
+            $user = $args['User'];
+            $anchorText = &$args['Text'];
+            $resources = $sender->data('Resources');
+            $roleResources = $sender->data('RoleResources');
+            $anchorText = $anchorText . $this->getTopcoderRoles($user, $resources, $roleResources);
+        }
+    }
+
+    /**
+     * Add Topcoder Roles
+     * @param $sender
+     * @param $args
+     */
+    public function base_userPhoto_handler($sender, $args){
+        if($sender instanceof DiscussionController || $sender instanceof GroupController) {
+            $user = $args['User'];
+            $anchorText = &$args['Title'];
+            $resources = $sender->data('Resources');
+            $roleResources = $sender->data('RoleResources');
+            $anchorText = $anchorText . $this->getTopcoderRoles($user, $resources, $roleResources);
+        }
+    }
+
+    private function getTopcoderRoles($user, $resources = null, $roleResources = null) {
+        $topcoderUsername = val('Name', $user, t('Unknown'));
+        if (isset($resources) && isset($roleResources)) {
+            $roles = [];
+            $allResourcesByMember = array_filter($resources, function ($k) use ($topcoderUsername) {
+                return $k->memberHandle == $topcoderUsername;
+            });
+            foreach ($allResourcesByMember as $resource) {
+                $roleResource = array_filter($roleResources, function ($k) use ($resource) {
+                    return $k->id == $resource->roleId;
+                });
+                array_push($roles, reset($roleResource)->name);
+            }
+            return count($roles) > 0 ? '(' . implode(', ', $roles) . ')' : '';
+
+        }
+
+        return '';
     }
 
     private function addGroupLinkToMenu() {
