@@ -28,6 +28,10 @@ class GroupController extends VanillaController {
     }
 
     public function initialize() {
+        if (!Gdn::session()->isValid()) {
+            redirectTo('/entry/signin?Target='.urlencode($this->SelfUrl));
+        }
+
         parent::initialize();
 
         $this->CssClass = 'NoPanel';

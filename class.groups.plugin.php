@@ -96,7 +96,7 @@ class GroupsPlugin extends Gdn_Plugin {
             // show all my discussions
         } else if (strpos($requestPath, 'discussions') === 0) {
             $wheres['d.GroupID'] = ['is null'];
-        } else if (strpos($requestPath, 'categories/groups') === 0) {
+        } else if (strpos($requestPath, 'categories') === 0) {
             //checkPermissions
             $groupModel = new GroupModel();
             $userGroups = $groupModel->memberOf(Gdn::session()->UserID);
@@ -294,8 +294,13 @@ class GroupsPlugin extends Gdn_Plugin {
         return '';
     }
 
+    /**
+     * Display a groups link in the menu
+     */
     private function addGroupLinkToMenu() {
-        echo '<li>'. anchor('Groups', GroupsPlugin::GROUPS_ROUTE).'</li>';
+        if(Gdn::session()->isValid()) {
+            echo '<li>'. anchor('Groups', GroupsPlugin::GROUPS_ROUTE).'</li>';
+        }
     }
 
     public function log($message, $data) {
