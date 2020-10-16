@@ -19,7 +19,12 @@ class GroupsController extends VanillaController {
     }
 
     public function initialize() {
+        if (!Gdn::session()->isValid()) {
+            redirectTo('/entry/signin?Target='.urlencode($this->SelfUrl));
+        }
+
         parent::initialize();
+
         $this->Menu->highlightRoute(GroupsPlugin::GROUPS_ROUTE);
         /**
          * The default Cache-Control header does not include no-store, which can cause issues (e.g. inaccurate unread
