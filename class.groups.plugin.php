@@ -367,14 +367,14 @@ class GroupsPlugin extends Gdn_Plugin {
     }
 
     public function log($message, $data) {
-       // if (c('Debug')) {
+        if (c('Debug')) {
             Logger::event(
                 'groups_plugin',
                 Logger::INFO,
                 $message,
                 $data
             );
-        //}
+        }
     }
  }
 
