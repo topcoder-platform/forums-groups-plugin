@@ -107,6 +107,23 @@ class GroupModel extends Gdn_Model {
         return array_column($data, 'GroupID');
     }
 
+
+    /**
+     * Get the list of groups as categories for the current user
+     *
+     */
+    public function getAllGroupsAsCategoryIDs(){
+        $sql = $this->SQL;
+        $sql->select('c.*')
+            ->from('Category c')
+            ->leftJoin('Group g', 'c.UrlCode = g.ChallengeID')
+            ->leftJoin('UserGroup ug', 'ug.GroupID = g.GroupID')
+            ->where('ug.UserID' , Gdn::session()->UserID );
+
+        $data = $sql->get()->resultArray();
+        return array_column($data, 'CategoryID');
+    }
+
     /**
      * Get all available groups including private ines
      */
