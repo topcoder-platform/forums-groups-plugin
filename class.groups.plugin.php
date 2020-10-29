@@ -17,6 +17,16 @@ class GroupsPlugin extends Gdn_Plugin {
     const GROUPS_MODERATION_MANAGE_PERMISSION = 'Groups.Moderation.Manage';
     const GROUPS_EMAIL_INVITATIONS_PERMISSION = 'Groups.EmailInvitations.Add';
 
+    private $groupModel;
+
+    /**
+     * Configure the plugin instance.
+     *
+     */
+    public function __construct(GroupModel $groupModel) {
+        $this->groupModel = $groupModel;
+    }
+
     /**
      * Database updates.
      */
@@ -124,6 +134,59 @@ class GroupsPlugin extends Gdn_Plugin {
     public  function discussionModel_beforeGetAnnouncements_handler($sender, $args){
         //FIX: it throws exceptions
         // $this->discussionModelWhere(Gdn::request()->path(), $args);
+    }
+
+    /**
+     * Show categories based on group membership
+     * @param $sender
+     * @param $args
+     */
+    public function base_beforeCategoryDropDown_handler($sender, $args) {
+        $this->log('base_beforeCategoryDropDown_hander', ['args' => $args]);
+        $options =  &$args['Options'];
+        $categoryData = val('CategoryData', $options);
+
+        $groupCats = $this->groupModel->getAllGroupsAsCategoryIDs();
+
+        // Grab the category data.
+        if (!$categoryData) {
+            $categoryData = CategoryModel::getByPermission(
+                'Discussions.Add',
+                null,
+                val('Filter', $options, ['Archived' => 0]),
+                val('PermFilter', $options, [])
+            );
+
+            foreach ($categoryData as $categoryID => $category) {
+                $category['isDisplayed'] = false;
+                if ($category['Depth'] < 3) {
+                    $category['isDisplayed'] = true;
+                } else if($category['Depth'] == 3){
+                    $category['isDisplayed'] = in_array($categoryID, $groupCats);
+                } else if ($category['Depth'] > 3) {
+                    $category['isDisplayed'] = false;
+                }
+                $categoryData[$categoryID] = $category;
+            }
+
+            $displayedCategories = array_filter($categoryData, function($e) {
+                 return ($e['isDisplayed'] == true);
+            });
+
+            $displayedCategoryIDs = array_column($displayedCategories, 'CategoryID');
+            foreach ($categoryData as $categoryID => $category) {
+               $parentCatID = (int) $category['ParentCategoryID'];
+               if ($category['Depth'] > 3) {
+                   $category['isDisplayed'] = in_array($parentCatID, $displayedCategoryIDs);
+                   $categoryData[$categoryID] = $category;
+               }
+            }
+
+            $displayedCategoriesWithChildren = array_filter($categoryData, function($e) {
+                return ($e['isDisplayed'] == true);
+            });
+            $options['CategoryData'] = $displayedCategoriesWithChildren;
+        }
     }
 
     public function discussionController_render_before($sender, $args) {
