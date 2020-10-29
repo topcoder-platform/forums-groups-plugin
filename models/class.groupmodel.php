@@ -125,6 +125,80 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
+     * Get all availbale categories for users based on group membership
+     * @return array
+     */
+    public function getAllAvailableCategories() {
+        $userGroupCategoryIDs =  $this->getAllGroupsAsCategoryIDs();
+        $ancestors = $this->getAncestors($userGroupCategoryIDs);
+        $ancestorIDs = array_column($ancestors, 'CategoryID');
+        return array_unique(array_values(array_merge($ancestorIDs, $userGroupCategoryIDs)));
+    }
+
+    /**
+     * Challenge Forums
+     * @return object
+     */
+    public function getChallengesForums() {
+        $categoryModel  = new CategoryModel();
+         return $categoryModel->getByCode('challenges-forums');
+    }
+
+    public function checkGroupCategoryPermissions($categoryTree) {
+        $categoriesWithGroupPermissions = $this->getAllAvailableCategories();
+        $userGroupCategoryIDs =  $this->getAllGroupsAsCategoryIDs();
+        $categoryModel = new CategoryModel();
+        $challengesForumsCategory = $this->getChallengesForums();
+        $challengesForumsCategoryID = val('CategoryID',$challengesForumsCategory);
+        foreach ($categoryTree as &$category) {
+            $categoryID = $category['CategoryID'];
+
+            $loadedCategory =  $categoryModel->getID($categoryID, DATASET_TYPE_ARRAY);
+            // CategoriesController has an invalid category'depth
+            $depth = $loadedCategory['Depth'];
+            $parentCategoryID =  $category['ParentCategoryID'];
+
+            if($depth < 2) {
+                if($challengesForumsCategoryID == $categoryID) {
+                    $category['isDisplayed'] = count($categoriesWithGroupPermissions) > 0;
+                } else {
+                    $category['isDisplayed'] = true;
+                }
+            } else {
+                $category['isDisplayed'] = false;
+                if ($depth  == 2 && $parentCategoryID != $challengesForumsCategoryID) {
+                    $category['isDisplayed'] = true;
+                } else if ($depth  >= 2 && (in_array($categoryID, $categoriesWithGroupPermissions)
+                        || in_array($parentCategoryID, $userGroupCategoryIDs)
+                    )) {
+                    $category['isDisplayed'] = true;
+                }
+            }
+        }
+
+        return array_filter($categoryTree, function($e) {
+            return ($e['isDisplayed'] == true);
+        });
+    }
+
+
+    /**
+     * List of Categories
+     * @param $categoryIDs
+     * @return bool|Gdn_DataSet
+     */
+    public function getAncestors($categoryIDs) {
+        return $this->SQL
+            ->select('c.ParentCategoryID, c.CategoryID, c.TreeLeft, c.TreeRight, c.Depth, c.Name, c.Description, c.CountDiscussions, c.CountComments, c.AllowDiscussions, c.UrlCode')
+            ->from('Category c')
+            ->join('Category d', 'c.TreeLeft < d.TreeLeft and c.TreeRight > d.TreeRight')
+            ->where('d.CategoryID', $categoryIDs)
+            ->orderBy('c.TreeLeft', 'asc')
+            ->get()
+            ->resultArray();
+    }
+
+    /**
      * Get all available groups including private ines
      */
     public function getAvailableGroups($where =[], $orderFields = '', $limit = false, $offset = false) {
