@@ -77,10 +77,8 @@ class GroupsPlugin extends Gdn_Plugin {
             $categoryTree =  $sender->data('CategoryTree');
             $selectedCategory = $sender->data('Category');
             if($categoryTree) {
-                $this->log('render_before_handle', ['Before CategoryTree' => $categoryTree]);
                 $displayedCategoryTree = $this->groupModel->checkGroupCategoryPermissions($categoryTree);
                 $sender->setData('CategoryTree', $displayedCategoryTree);
-                $this->log('render_before_handle', ['CategoryTree' => $displayedCategoryTree]);
             }
 
             if($selectedCategory) {
