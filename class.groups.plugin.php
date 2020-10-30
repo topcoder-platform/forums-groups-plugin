@@ -72,7 +72,22 @@ class GroupsPlugin extends Gdn_Plugin {
     public function base_render_before($sender) {
         $sender->addJsFile('vendors/prettify/prettify.js', 'plugins/Groups');
         $sender->addJsFile('dashboard.js', 'plugins/Groups');
+
+        if(inSection('CategoryList')) {
+            $categoryTree =  $sender->data('CategoryTree');
+            $selectedCategory = $sender->data('Category');
+            if($categoryTree) {
+                $displayedCategoryTree = $this->groupModel->checkGroupCategoryPermissions($categoryTree);
+                $sender->setData('CategoryTree', $displayedCategoryTree);
+            }
+
+            if($selectedCategory) {
+                $displayedCategory = $this->groupModel->checkGroupCategoryPermissions($selectedCategory);
+                $sender->setData('Category', $displayedCategory);
+            }
+        }
     }
+
 
     /**
      * Load CSS into head for the plugin
@@ -146,8 +161,6 @@ class GroupsPlugin extends Gdn_Plugin {
         $options =  &$args['Options'];
         $categoryData = val('CategoryData', $options);
 
-        $groupCats = $this->groupModel->getAllGroupsAsCategoryIDs();
-
         // Grab the category data.
         if (!$categoryData) {
             $categoryData = CategoryModel::getByPermission(
@@ -157,35 +170,9 @@ class GroupsPlugin extends Gdn_Plugin {
                 val('PermFilter', $options, [])
             );
 
-            foreach ($categoryData as $categoryID => $category) {
-                $category['isDisplayed'] = false;
-                if ($category['Depth'] < 3) {
-                    $category['isDisplayed'] = true;
-                } else if($category['Depth'] == 3){
-                    $category['isDisplayed'] = in_array($categoryID, $groupCats);
-                } else if ($category['Depth'] > 3) {
-                    $category['isDisplayed'] = false;
-                }
-                $categoryData[$categoryID] = $category;
-            }
-
-            $displayedCategories = array_filter($categoryData, function($e) {
-                 return ($e['isDisplayed'] == true);
-            });
-
-            $displayedCategoryIDs = array_column($displayedCategories, 'CategoryID');
-            foreach ($categoryData as $categoryID => $category) {
-               $parentCatID = (int) $category['ParentCategoryID'];
-               if ($category['Depth'] > 3) {
-                   $category['isDisplayed'] = in_array($parentCatID, $displayedCategoryIDs);
-                   $categoryData[$categoryID] = $category;
-               }
-            }
-
-            $displayedCategoriesWithChildren = array_filter($categoryData, function($e) {
-                return ($e['isDisplayed'] == true);
-            });
-            $options['CategoryData'] = $displayedCategoriesWithChildren;
+            $displayedCategories = $this->groupModel->checkGroupCategoryPermissions($categoryData);
+            $options['CategoryData'] = $displayedCategories;
+            return;
         }
     }
 
