@@ -63,7 +63,6 @@ $groupModel = new GroupModel();
                 writeDiscussion($Discussion, $this, $Session);
             }
             echo '</ul>'; ?>
-            <div class="MoreWrap"> <?php echo anchor('All Discussions', '/group/discussions/'.$Group->GroupID, 'MoreWrap');?></div>
             <?php
         } else {
             ?>

@@ -119,6 +119,8 @@ class GroupsPlugin extends Gdn_Plugin {
         }
         if(strpos($requestPath, 'discussions/mine') === 0) {
             // show all my discussions
+        } else if (strpos($requestPath, 'discussions/bookmarked') === 0) {
+            // show all bookmarked by default
         } else if (strpos($requestPath, 'discussions') === 0) {
             $wheres['d.GroupID'] = ['is null'];
         } else if (strpos($requestPath, 'categories') === 0) {
@@ -130,10 +132,10 @@ class GroupsPlugin extends Gdn_Plugin {
             foreach ($userGroups as $userGroup) {
                 array_push($userGroupsIDs, $userGroup->GroupID);
             }
-
             $showGroupsIDs = array_merge($userGroupsIDs, $publicGroupIDs);
             $this->log('discussionModelWhere',  ['userGroups' => $userGroups, 'publicGroupsIDs'=> $publicGroupIDs,  'showGroupIDs' => $showGroupsIDs]);
             $wheres['d.GroupID'] =  $showGroupsIDs;
+            $wheres['Groups'] = 'all';
         }
 
     }
