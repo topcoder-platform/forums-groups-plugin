@@ -132,10 +132,10 @@ class GroupsPlugin extends Gdn_Plugin {
             foreach ($userGroups as $userGroup) {
                 array_push($userGroupsIDs, $userGroup->GroupID);
             }
-
             $showGroupsIDs = array_merge($userGroupsIDs, $publicGroupIDs);
             $this->log('discussionModelWhere',  ['userGroups' => $userGroups, 'publicGroupsIDs'=> $publicGroupIDs,  'showGroupIDs' => $showGroupsIDs]);
             $wheres['d.GroupID'] =  $showGroupsIDs;
+            $wheres['Groups'] = 'all';
         }
 
     }
