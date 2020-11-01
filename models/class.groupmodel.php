@@ -783,7 +783,7 @@ class GroupModel extends Gdn_Model {
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
         $groupRole = val('Role', $result, null);
 
-        if(($canEditDiscussion && $groupRole && $discussion->IInsertUserID == Gdn::session()->UserID)
+        if(($canEditDiscussion && $groupRole && $discussion->InsertUserID == Gdn::session()->UserID)
             || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
