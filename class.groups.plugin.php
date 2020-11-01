@@ -17,6 +17,9 @@ class GroupsPlugin extends Gdn_Plugin {
     const GROUPS_MODERATION_MANAGE_PERMISSION = 'Groups.Moderation.Manage';
     const GROUPS_EMAIL_INVITATIONS_PERMISSION = 'Groups.EmailInvitations.Add';
 
+    const ROLE_TYPE_TOPCODER = 'topcoder';
+    const ROLE_TOPCODER_CONNECT_ADMIN = 'Connect Admin';
+
     private $groupModel;
 
     /**
@@ -46,7 +49,60 @@ class GroupsPlugin extends Gdn_Plugin {
             return;
         }
         $this->structure();
+
+        $this->initDefaultTopcoderRoles();
     }
+
+    /**
+     * Init all default Topcoder roles and set up permissions
+     */
+    private function initDefaultTopcoderRoles() {
+        $requiredRoles = [self::ROLE_TOPCODER_CONNECT_ADMIN];
+        $missingRoles = [];
+        RoleModel::getByName($requiredRoles, $missingRoles);
+        foreach ($missingRoles as $newRole) {
+            $this->defineRole(['Name' => $newRole, 'Type' => self::ROLE_TYPE_TOPCODER,  'Deletable' => '1',
+                'CanSession' => '1', 'Description' => t($newRole.' Description', 'Added by Groups plugin')]);
+        }
+
+        $permissionModel = Gdn::permissionModel();
+        $permissionModel->save( [
+            'Role' => self::ROLE_TOPCODER_CONNECT_ADMIN,
+            self::GROUPS_MODERATION_MANAGE_PERMISSION => 1
+        ], true);
+
+        Gdn::permissionModel()->clearPermissions();
+    }
+
+
+    /**
+     * Create a new role
+     * @param $values
+     */
+
+    private function defineRole($values) {
+        if(strlen($values['Name']) == 0) {
+            return;
+        }
+
+        $roleModel = new RoleModel();
+
+        // Check to see if there is a role with the same name and type.
+        $roleID = $roleModel->SQL->getWhere('Role', ['Name' => $values['Name'], 'Type' => $values['Type']])->value('RoleID', null);
+
+        if (is_null($roleID)) {
+            // Figure out the next role ID.
+            $maxRoleID = $roleModel->SQL->select('r.RoleID', 'MAX')->from('Role r')->get()->value('RoleID', 0);
+            $roleID = $maxRoleID + 1;
+            $values['RoleID'] = $roleID;
+
+            // Insert the role.
+            $roleModel->SQL->insert('Role', $values);
+        }
+
+        $roleModel->clearCache();
+    }
+
 
     /**
      * Update DB after 'Installed' event
