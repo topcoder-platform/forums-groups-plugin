@@ -145,6 +145,10 @@ class GroupModel extends Gdn_Model {
     }
 
     public function checkGroupCategoryPermissions($categoryTree) {
+        if(Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            return $categoryTree;
+        }
+
         $categoriesWithGroupPermissions = $this->getAllAvailableCategories();
         $userGroupCategoryIDs =  $this->getAllGroupsAsCategoryIDs();
         $categoryModel = new CategoryModel();
@@ -219,12 +223,17 @@ class GroupModel extends Gdn_Model {
 
         $sql = $this->SQL;
 
+        $groupTypes = [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE];
+        if(Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            array_push($groupTypes,GroupModel::TYPE_SECRET);
+        }
+
         // Build up the base query. Self-join for optimization.
         $sql->select('g.*')
             ->from('Group g')
             ->leftjoin('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
             ->where('ug.UserID' , null)
-            ->where('g.Type' , [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE] )
+            ->where('g.Type' , $groupTypes )
             ->where($where)
             ->limit($limit, $offset);
 
@@ -247,12 +256,17 @@ class GroupModel extends Gdn_Model {
 
         $sql = $this->SQL;
 
+        $groupTypes = [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE];
+        if(Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+            array_push($groupTypes,GroupModel::TYPE_SECRET);
+        }
+
         // Build up the base query. Self-join for optimization.
         $sql->select('g.*')
             ->from('Group g')
             ->leftjoin('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
             ->where('ug.UserID' , null)
-            ->where('g.Type' , [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE] )
+            ->where('g.Type' , $groupTypes)
             ->where($where);
 
         $data = $sql->get()
@@ -769,7 +783,7 @@ class GroupModel extends Gdn_Model {
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
         $groupRole = val('Role', $result, null);
 
-        if(($canEditDiscussion && $groupRole && $discussion->IInsertUserID == Gdn::session()->UserID)
+        if(($canEditDiscussion && $groupRole && $discussion->InsertUserID == Gdn::session()->UserID)
             || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
