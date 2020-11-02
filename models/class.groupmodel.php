@@ -689,6 +689,10 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canLeave($group) {
+        if(isset($group->ChallengeID)) {
+            return false;
+        }
+
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
         if(Gdn::session()->UserID == $group->OwnerID) {
