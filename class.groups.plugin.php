@@ -407,7 +407,7 @@ class GroupsPlugin extends Gdn_Plugin {
      */
     private function addGroupLinkToMenu() {
         if(Gdn::session()->isValid()) {
-            echo '<li>'. anchor('Groups', GroupsPlugin::GROUPS_ROUTE).'</li>';
+            echo '<li>'. anchor('Challenges', GroupsPlugin::GROUPS_ROUTE).'</li>';
         }
     }
 
