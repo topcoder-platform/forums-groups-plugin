@@ -82,6 +82,30 @@ paths:
       tags:
       - Groups
       summary: Get a group.
+     patch:
+       parameters:
+         - description: The group ID.
+           in: path
+           name: id
+           required: true
+           schema:
+             type: integer
+       responses:
+         '200':
+           content:
+             'application/json':
+               schema:
+                 $ref: '#/components/schemas/Group'
+           description: Success
+       tags:
+         - Groups
+       requestBody:
+         content:
+           application/json:
+             schema:
+               $ref: '#/components/schemas/GroupPatch'
+         required: true
+       summary: Update a group.
   '/groups/{id}/members/{userid}':
     delete:
       parameters:
@@ -131,6 +155,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/GroupPost'
+      required: true
+    GroupPatch:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/GroupPatch'
       required: true
   schemas:
     Group:
@@ -194,6 +224,15 @@ components:
         - description
         - challengeID
         - challengeUrl
+      type: object
+    GroupPatch:
+      properties:
+        name:
+          description: The name of the group.
+          minLength: 1
+          type: string
+      required:
+        - name
       type: object
     GroupMemberPost:
       description: Add a member to a group

@@ -136,6 +136,31 @@ class GroupsApiController extends AbstractApiController {
     }
 
     /**
+     * Update a group.
+     *
+     * @param array $body The request body.
+     * @throws ServerException if the group could not be updated.
+     * @return array
+     */
+    public function patch($id, array $body) {
+        $in = $this->groupPatchSchema()->setDescription('Update a group.');
+        $out = $this->groupSchema('out');
+        $body = $in->validate($body);
+        $group = $this->groupModel->getByGroupID($id);
+        if(!$group) {
+            throw new NotFoundException('Group');
+        }
+        $group->Name = $body['name'];
+        $result = $this->groupModel->save($group);
+        $this->validateModel($this->groupModel);
+        if ($result == false) {
+            throw new ServerException('Unable to update a group.', 500);
+        }
+        $row = $this->groupModel->getID($id, DATASET_TYPE_ARRAY);
+        return $out->validate($row);
+    }
+
+    /**
      * Add participants to a group.
      *
      * @param int $id The ID of the group.
@@ -251,7 +276,7 @@ class GroupsApiController extends AbstractApiController {
     }
 
     /**
-     * Get a group schema with minimal add/edit fields.
+     * Get a group schema with minimal add fields.
      *
      * @param string $type The type of schema.
      * @return Schema Returns a schema object.
@@ -268,6 +293,17 @@ class GroupsApiController extends AbstractApiController {
         ]), 'GroupPost');
     }
 
+    /**
+     * Get a group schema with minimal edit fields.
+     *
+     * @param string $type The type of schema.
+     * @return Schema Returns a schema object.
+     */
+    public function groupPatchSchema() {
+        return  $this->schema(Schema::parse([
+            'name:s' => 'The name of the group.',
+        ]), 'GroupPatch');
+    }
 
     /**
      * Get a schema instance comprised of all available group fields.
