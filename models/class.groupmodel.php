@@ -630,7 +630,7 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     * Check if the current user has followed at least one group catagory
+     * Check if the current user has followed at least one group category
      *
      */
     public function hasFollowed($group) {
@@ -659,7 +659,7 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     * Follow all group's category
+     * Follow all group's categories
      *
      */
     public function follow($group) {
