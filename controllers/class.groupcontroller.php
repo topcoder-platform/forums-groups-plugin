@@ -372,6 +372,43 @@ class GroupController extends VanillaController {
         $this->render();
     }
 
+    /**
+     * Follow all group's categories
+     * @param $GroupID
+     * @throws Gdn_UserException
+     */
+    public function follow($GroupID) {
+        $Group = $this->findGroup($GroupID);
+        if(!$this->GroupModel->canView($Group)) {
+            throw permissionException();
+        }
+        $this->setData('Group', $Group);
+        if ($this->Form->authenticatedPostBack(true)) {
+            $this->GroupModel->follow($Group);
+            $this->setRedirectTo('group/' . $GroupID);
+        }
+        $this->render();
+      }
+
+    /**
+     * Unfollow all group's categories
+     * @param $GroupID
+     * @throws Gdn_UserException
+     */
+    public function unfollow($GroupID) {
+        $Group = $this->findGroup($GroupID);
+        if(!$this->GroupModel->canView($Group)) {
+            throw permissionException();
+        }
+        $this->setData('Group', $Group);
+        if ($this->Form->authenticatedPostBack(true)) {
+            $this->GroupModel->unfollow($Group);
+            $this->setRedirectTo('group/'.$GroupID);
+        }
+        $this->render();
+    }
+
+
 
     /**
      * Accept a group invitation

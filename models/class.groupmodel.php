@@ -617,6 +617,90 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
+     * Can follow group categories
+     *
+     */
+    public function canFollow($group) {
+        if($group->ChallengeID) {
+            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+            return val('Role', $result, false);
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the current user has followed at least one group catagory
+     *
+     */
+    public function hasFollowed($group) {
+        if($group->ChallengeID) {
+            $categoryModel = new CategoryModel();
+            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
+
+            if($groupCategory->DisplayAs !== 'Discussions') {
+                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
+                $categoryIDs = array_column($categories, 'CategoryID');
+            } else {
+                $categoryIDs = [$groupCategory->CategoryID];
+            }
+
+            $where['Followed'] = true;
+            $where['CategoryID'] = $categoryIDs;
+
+            $result = $categoryModel
+                ->getWhere($where)
+                ->resultArray();
+
+            return  count($result) > 0;
+        }
+
+        return false;
+    }
+
+    /**
+     * Follow all group's category
+     *
+     */
+    public function follow($group) {
+        if($group->ChallengeID) {
+            $categoryModel = new CategoryModel();
+            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
+            if($groupCategory->DisplayAs !== 'Discussions') {
+                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
+                $categoryIDs = array_column($categories, 'CategoryID');
+            } else {
+                $categoryIDs = [$groupCategory->CategoryID];
+            }
+
+            foreach($categoryIDs as $categoryID) {
+                $categoryModel->follow(Gdn::session()->UserID, $categoryID, true);
+            }
+        }
+    }
+
+    /**
+     * Unfollow all group's categories
+     *
+     */
+    public function unfollow($group) {
+        if($group->ChallengeID) {
+            $categoryModel = new CategoryModel();
+            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
+            if($groupCategory->DisplayAs !== 'Discussions') {
+                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
+                $categoryIDs = array_column($categories, 'CategoryID');
+            } else {
+                $categoryIDs = [$groupCategory->CategoryID];
+            }
+
+            foreach($categoryIDs as $categoryID) {
+                $categoryModel->follow(Gdn::session()->UserID, $categoryID, false);
+            }
+        }
+    }
+
+    /**
      * Check add group permission
      *
      */
