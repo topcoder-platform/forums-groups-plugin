@@ -1020,6 +1020,8 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canMoveDiscussion($discussion) {
+        // Don't move any discussions
+        /*
         $groupID = $discussion->GroupID;
         if(!$groupID ) {
             return $this->canEditDiscussion($discussion);
@@ -1031,7 +1033,7 @@ class GroupModel extends Gdn_Model {
         if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
             || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
-        }
+        } */
         return false;
     }
 
