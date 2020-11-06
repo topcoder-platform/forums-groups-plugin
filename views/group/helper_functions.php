@@ -57,7 +57,7 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $canLeave = $groupModel->canLeave($group);
         $canInviteMember = $groupModel->canInviteNewMember($group);
         $canManageMembers = $groupModel->canManageMembers($group);
-        $canManageCategories = $groupModel->canManageCategories($group);
+        $canManageCategories = $groupModel->canManageCategories();
         $canFollow = $groupModel->canFollow($group);
         $hasFollowed = $groupModel->hasFollowed($group);
         $dropdown
