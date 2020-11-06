@@ -709,6 +709,15 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
+     * Check manage group category permission
+     *
+     */
+    public function canManageCategories() {
+        return Gdn::session()->checkPermission(GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION);
+    }
+
+
+    /**
      * Check edit group permission
      *
      */

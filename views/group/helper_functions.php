@@ -57,18 +57,18 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $canLeave = $groupModel->canLeave($group);
         $canInviteMember = $groupModel->canInviteNewMember($group);
         $canManageMembers = $groupModel->canManageMembers($group);
+        $canManageCategories = $groupModel->canManageCategories($group);
         $canFollow = $groupModel->canFollow($group);
         $hasFollowed = $groupModel->hasFollowed($group);
         $dropdown
             ->addLinkIf($canEdit, t('Edit Group'), '/group/edit/'.$groupID, 'edit')
             ->addLinkIf($canLeave, t('Leave Group'), '/group/leave/'.$groupID, 'leave', 'LeaveGroup Popup')
             ->addLinkIf($canDelete, t('Delete Group'), '/group/delete?groupid='.$groupID, 'delete', 'DeleteGroup Popup')
+            ->addLinkIf($canManageCategories, t('Add Category'), '/group/category/'.$groupID, 'add_category', 'AddCategory Popup')
             ->addLinkIf($canInviteMember, t('Invite Member'), '/group/invite/'.$groupID, 'invite','InviteGroup Popup')
             ->addLinkIf($canManageMembers, t('Manage Members'), '/group/members/'.$groupID, 'manage')
             ->addLinkIf($canFollow && !$hasFollowed, t('Follow Categories'), '/group/follow/'.$groupID, 'follow','FollowGroup Popup')
             ->addLinkIf($hasFollowed, t('Unfollow Categories'), '/group/unfollow/'.$groupID, 'unfollow', 'UnfollowGroup Popup');
-
-
        return $dropdown;
     }
 }
