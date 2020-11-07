@@ -13,7 +13,8 @@
   "registerPermissions": [
     "Groups.Group.Add",
     "Groups.Moderation.Manage",
-    "Groups.EmailInvitations.Add"
+    "Groups.EmailInvitations.Add",
+    "Groups.Category.Manage"
   ],
   "authors": [
     {

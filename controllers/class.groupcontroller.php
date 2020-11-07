@@ -4,6 +4,7 @@
  */
 
 use Vanilla\Message;
+use Cocur\Slugify\Slugify;
 
 /**
  * Handles accessing & displaying a single group via /group endpoint.
@@ -12,6 +13,8 @@ class GroupController extends VanillaController {
 
     /** @var GroupModel */
     public $GroupModel;
+
+    private $CategoryModel;
 
     /** @var Gdn_Form */
     public $Form;
@@ -22,9 +25,10 @@ class GroupController extends VanillaController {
     /** @var bool Whether or not to show the category dropdown. */
     public $ShowCategorySelector = true;
 
-    public function __construct() {
+    public function __construct(CategoryModel $CategoryModel) {
         parent::__construct();
         $this->GroupModel = new GroupModel();
+        $this->CategoryModel = $CategoryModel;
     }
 
     public function initialize() {
@@ -335,6 +339,7 @@ class GroupController extends VanillaController {
                                 $this->Form->addError('User is a member of this group.');
                             } else {
                                 $this->GroupModel->invite($GroupID, $user->UserID);
+                                $this->informMessage('Invitation was sent.');
                                 $this->render('invitation_sent');
                             }
                         } catch (\Exception $e) {
@@ -603,6 +608,7 @@ class GroupController extends VanillaController {
         $this->render();
 
     }
+
     /**
      * Create a discussion.
      * @param int $categoryID Unique ID of the category to add the discussion to.
@@ -686,6 +692,39 @@ class GroupController extends VanillaController {
 
         $this->setData('Breadcrumbs', $breadcrumbs);
 
+    }
+
+    /**
+     * Join a group
+     * @param $GroupID
+     * @throws Gdn_UserException
+     */
+    public function category($GroupID) {
+        $Group = $this->findGroup($GroupID);
+
+        if(!$this->GroupModel->canManageCategories()) {
+            throw permissionException();
+        }
+
+        $this->setData('Group', $Group);
+        $this->Form->setModel($this->CategoryModel);
+        $slugify = new Slugify();
+        $parentCategory = $Group->ChallengeID ? $this->CategoryModel->getByCode($Group->ChallengeID): -1;
+        $this->Form->addHidden('ParentCategoryID', $parentCategory->CategoryID);
+        $this->Form->addHidden('DisplayAs', 'Discussions');
+        $this->Form->addHidden('AllowFileUploads',1);
+        $this->Form->addHidden('UrlCode','');
+        if ($this->Form->authenticatedPostBack(true)) {
+            $this->Form->setFormValue('UrlCode', $Group->ChallengeID.'-'.$slugify->slugify($this->Form->getValue('Name'), '-'));
+            $newCategoryID = $this->Form->save();
+            if(!$newCategoryID) {
+                $this->errorMessage($this->Form->errors());
+            } else {
+                $this->informMessage('Category was added.');
+            }
+        }
+
+        $this->render('add_category');
     }
 
     /**
