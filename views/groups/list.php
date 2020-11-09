@@ -19,7 +19,7 @@ echo '<div class="media-list-container Group-Box my-groups">';
 
     if ($this->GroupData->numRows() > 0 ) {
         ?>
-        <h2 class="sr-only"><?php echo t('Group List'); ?></h2>
+        <h2 class="sr-only"><?php echo t('Challenge List'); ?></h2>
         <ul class="media-list DataList">
             <?php include($this->fetchViewLocation('groups')); ?>
         </ul>
@@ -31,7 +31,7 @@ echo '<div class="media-list-container Group-Box my-groups">';
 
     } else {
         ?>
-        <div class="Empty"><?php echo t('No groups were found.'); ?></div>
+        <div class="Empty"><?php echo t('No challenges were found.'); ?></div>
     <?php
     }
 echo '</div>';

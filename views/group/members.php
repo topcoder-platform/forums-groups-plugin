@@ -18,7 +18,7 @@ $Members = $this->data('Members');
             <?php echo writeGroupMembersWithDetails($Leaders, $Group); ?>
         </ul>
     <?php } else {
-        echo '<div class="EmptyMessage">There are no group leaders.</div>';
+        echo '<div class="EmptyMessage">There are no leaders.</div>';
     }?>
 </div>
 <div class="media-list-container Group-Box MemberList">
@@ -42,7 +42,7 @@ $Members = $this->data('Members');
         echo '</div>';
      ?>
     <?php } else {
-        echo '<div class="EmptyMessage">There are no group members.</div>';
+        echo '<div class="EmptyMessage">There are no members.</div>';
     }?>
 </div>
 

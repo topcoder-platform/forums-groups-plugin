@@ -1,5 +1,5 @@
 <?php if (!defined('APPLICATION')) exit(); ?>
-<h1><?php echo t('Invite User to Group'); ?></h1>
+<h1><?php echo t('Invite User'); ?></h1>
 <?php
 $Group = $this->data('Group');
 echo $this->Form->open();
@@ -7,7 +7,7 @@ echo $this->Form->errors();
 ?>
 <div class="Wrap">
     <?php
-    echo '<div class="P">Are you sure you want to invite User to this \''. $Group->Name.'\' group?</div>';
+    echo '<div class="P">Are you sure you want to invite User to \''. $Group->Name.'\'?</div>';
     echo '<div class="P">';
     echo $this->Form->label('Username', 'Username');
     echo wrap($this->Form->textBox('Username', ['maxlength' => 100, 'class' => 'InputBox BigInput']), 'div', ['class' => 'TextBoxWrapper']);
