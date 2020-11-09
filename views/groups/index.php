@@ -21,7 +21,7 @@ echo '<div class="media-list-container Group-Box my-groups">';
         <ul class="media-list DataList">
             <?php echo writeGroups($this->GroupData, $this); ?>
         </ul>
-        <div class="MoreWrap"> <?php echo anchor('All Challenges', '/groups/mine', 'MoreWrap');?></div>
+        <div class="MoreWrap"> <?php echo anchor('All My Challenges', '/groups/mine', 'MoreWrap');?></div>
         <?php
     } else {
         ?>
