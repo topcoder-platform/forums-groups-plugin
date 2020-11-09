@@ -76,7 +76,7 @@ class GroupsController extends VanillaController {
         // Set canonical URL
         $this->canonicalUrl(url(concatSep('/', '/groups/mine', pageNumber($Offset, $Limit, true, false)), true));
 
-        $this->title(t('My Groups'));
+        $this->title(t('My Challenges'));
         $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => t('My Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/mine']]);
 
