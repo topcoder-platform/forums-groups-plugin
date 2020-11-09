@@ -145,6 +145,7 @@ class GroupModel extends Gdn_Model {
     }
 
     public function checkGroupCategoryPermissions($categoryTree) {
+        GroupsPlugin::log('checkGroupCategoryPermissions', []);
         if(Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return $categoryTree;
         }

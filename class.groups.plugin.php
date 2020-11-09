@@ -186,6 +186,7 @@ class GroupsPlugin extends Gdn_Plugin {
     }
 
     private function discussionModelWhere($requestPath, $args){
+        GroupsPlugin::log('discussionModelWhere:enter', ['Wheres'=> $args['Wheres']]);
         $wheres = [];
         if(array_key_exists('Wheres', $args)) {
             $wheres =  &$args['Wheres'];
@@ -206,22 +207,27 @@ class GroupsPlugin extends Gdn_Plugin {
                 array_push($userGroupsIDs, $userGroup->GroupID);
             }
             $showGroupsIDs = array_merge($userGroupsIDs, $publicGroupIDs);
-            $this->log('discussionModelWhere',  ['userGroups' => $userGroups, 'publicGroupsIDs'=> $publicGroupIDs,  'showGroupIDs' => $showGroupsIDs]);
+            self::log('discussionModelWhere',  ['userGroups' => $userGroups, 'publicGroupsIDs'=> $publicGroupIDs,  'showGroupIDs' => $showGroupsIDs]);
             $wheres['d.GroupID'] =  $showGroupsIDs;
             $wheres['Groups'] = 'all';
         }
 
+        GroupsPlugin::log('discussionModelWhere:exit', ['Updated Wheres'=> $wheres]);
+
     }
 
     public function discussionModel_beforeGet_handler($sender, $args) {
+        GroupsPlugin::log('discussionModel_beforeGet_handler', []);
         $this->discussionModelWhere(Gdn::request()->path(), $args);
     }
 
     public  function discussionModel_beforeGetCount_handler($sender, $args){
+        GroupsPlugin::log('discussionModel_beforeGetCount_handler');
         $this->discussionModelWhere(Gdn::request()->path(), $args);
     }
 
     public  function discussionModel_beforeGetAnnouncements_handler($sender, $args){
+        GroupsPlugin::log('discussionModel_beforeGetAnnouncements_handler');
         //FIX: it throws exceptions
         // $this->discussionModelWhere(Gdn::request()->path(), $args);
     }
@@ -232,7 +238,7 @@ class GroupsPlugin extends Gdn_Plugin {
      * @param $args
      */
     public function base_beforeCategoryDropDown_handler($sender, $args) {
-        $this->log('base_beforeCategoryDropDown_hander', ['args' => $args]);
+        self::log('base_beforeCategoryDropDown_hander', ['args' => $args]);
         $options =  &$args['Options'];
         $categoryData = val('CategoryData', $options);
 
@@ -327,9 +333,9 @@ class GroupsPlugin extends Gdn_Plugin {
                 $options->removeItem('refetch');
             }
 
-            //$this->log('discussionController_discussionOptionsDropdown_handler', ['Discussion' => $Discussion->DiscussionID,
-            //    'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canDiscmiss' => $canDismiss,
-            //    'canAnnounce' =>$canAnnounce, 'canSink' => $canSink, 'canMove' => $canMove, 'canFetch' => $canRefetch ]);
+            self::log('discussionController_discussionOptionsDropdown_handler', ['Discussion' => $Discussion->DiscussionID,
+                'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canDiscmiss' => $canDismiss,
+                'canAnnounce' =>$canAnnounce, 'canSink' => $canSink, 'canMove' => $canMove, 'canFetch' => $canRefetch ]);
         }
     }
 
@@ -345,13 +351,22 @@ class GroupsPlugin extends Gdn_Plugin {
         $this->addGroupLinkToMenu();
     }
 
+    /**
+     * Add additional links in Discussion Info
+     * @param $sender
+     * @param $args
+     */
     public function discussionController_discussionInfo_handler($sender, $args) {
         if($sender->Data['Discussion']) {
             $groupID = $sender->Data['Discussion']->GroupID;
             if($groupID) {
                 $groupModel = new GroupModel();
                 $group = $groupModel->getByGroupID($groupID);
-                echo anchor($group->Name, GroupsPlugin::GROUP_ROUTE.$groupID);
+                if($group->ChallengeUrl) {
+                    echo anchor($group->Name, $group->ChallengeUrl);
+                } else {
+                    echo anchor($group->Name, GroupsPlugin::GROUP_ROUTE.$groupID);
+                }
             }
         }
 
@@ -428,15 +443,15 @@ class GroupsPlugin extends Gdn_Plugin {
         }
     }
 
-    public function log($message, $data) {
-        if (c('Debug')) {
+    public static function log($message, $data= []) {
+       // if (c('Debug')) {
             Logger::event(
                 'groups_plugin',
                 Logger::INFO,
                 $message,
                 $data
             );
-        }
+     //   }
     }
  }
 
