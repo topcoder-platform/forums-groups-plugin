@@ -7,7 +7,7 @@ echo $this->Form->errors();
 ?>
 <div class="Wrap">
     <?php
-    echo '<div class="P">Are you sure you want to add a new category to this \''. $Group->Name.'\' group?</div>';
+    echo '<div class="P">Are you sure you want to add a new category to \''. $Group->Name.'\'?</div>';
     echo '<div class="P">';
     echo $this->Form->label('Category Name', 'Name');
     echo wrap($this->Form->textBox('Name', ['maxlength' => 255, 'class' => 'InputBox']), 'div', ['class' => 'TextBoxWrapper']);

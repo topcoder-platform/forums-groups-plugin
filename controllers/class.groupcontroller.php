@@ -69,7 +69,7 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group, true);
 
         $this->title($Group->Name);
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID]]);
         $this->setData('CurrentUserGroups', $this->GroupModel->memberOf(Gdn::session()->UserID));
         $this->setData('TotalMembers', $this->GroupModel->countOfMembers($GroupID));
@@ -96,7 +96,7 @@ class GroupController extends VanillaController {
         if(!$this->GroupModel->canAddGroup()) {
             throw permissionException();
         }
-        $this->title(t('New Group'));
+        $this->title(t('New Challenge'));
         // Use the edit form without groupID
         $this->View = 'Edit';
         $this->edit();
@@ -113,8 +113,8 @@ class GroupController extends VanillaController {
         if(!$this->GroupModel->canDelete($Group)) {
             throw permissionException();
         }
-        $this->title(t('Delete Group'));
-
+        $this->title(t('Delete Challenge'));
+        $this->setData('Group', $Group);
        // Make sure the form knows which item we are deleting.
         $this->Form->addHidden('GroupID', $Group->GroupID);
 
@@ -134,7 +134,7 @@ class GroupController extends VanillaController {
      */
     public function edit($groupID = false) {
         if ($this->title() == '') {
-            $this->title(t('Edit Group'));
+            $this->title(t('Edit Challenge'));
         }
 
         $Group = $this->GroupModel->getByGroupID($groupID);
@@ -147,7 +147,7 @@ class GroupController extends VanillaController {
             }
 
         }
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name ? $Group->Name: $this->title() ]]);
 
         // Set the model on the form.
@@ -238,7 +238,7 @@ class GroupController extends VanillaController {
             $this->View = 'members';
         }
 
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('Members')]]);
 
         $this->title(t('Members'));
@@ -471,7 +471,7 @@ class GroupController extends VanillaController {
 
         $Group = $this->GroupModel->getByGroupID($GroupID);
         $this->setData('Group',$Group);
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('Discussions')]]);
 
         // Check for the feed keyword.
@@ -580,7 +580,7 @@ class GroupController extends VanillaController {
         }
 
         $this->setData('Breadcrumbs',
-            [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+            [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
                 ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Announcement')]]);
         $this->title('New Announcement');
         $this->setDiscussionData($Group, 2);
@@ -600,7 +600,7 @@ class GroupController extends VanillaController {
             throw permissionException();
         }
 
-        $this->setData('Breadcrumbs',   [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs',   [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Discussion')]]);
         $this->title('New Discussion');
         $this->setDiscussionData($Group, 1);

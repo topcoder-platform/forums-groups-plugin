@@ -43,8 +43,8 @@ class GroupsController extends VanillaController {
         // Setup head
         Gdn_Theme::section('GroupList');
 
-        $this->title(t('Groups'));
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE]]);
+        $this->title(t('Challenges'));
+        $this->setData('Breadcrumbs', [['Name' => 'Challenges', 'Url' => GroupsPlugin::GROUPS_ROUTE]]);
 
         $GroupModel = new GroupModel();
 
@@ -76,9 +76,9 @@ class GroupsController extends VanillaController {
         // Set canonical URL
         $this->canonicalUrl(url(concatSep('/', '/groups/mine', pageNumber($Offset, $Limit, true, false)), true));
 
-        $this->title(t('My Groups'));
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => t('My Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/mine']]);
+        $this->title(t('My Challenges'));
+        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+            ['Name' => t('My Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/mine']]);
 
         $GroupModel = new GroupModel();
 
@@ -145,9 +145,9 @@ class GroupsController extends VanillaController {
         // Set canonical URL
         $this->canonicalUrl(url(concatSep('/', '/groups/all', pageNumber($Offset, $Limit, true, false)), true));
 
-        $this->title(t('Available Groups'));
-        $this->setData('Breadcrumbs', [['Name' => t('Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => t('Available Groups'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/all']]);
+        $this->title(t('Available Challenges'));
+        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+            ['Name' => t('Available Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/all']]);
 
         $GroupModel = new GroupModel();
 

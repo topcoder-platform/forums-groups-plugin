@@ -81,7 +81,7 @@ $groupModel = new GroupModel();
                     <?php echo anchor('All Members',allMembersUrl($this->data('Group')), 'MoreWrap');?>
                 </div>
                 <?php }  else  {
-                    echo '<div class="EmptyMessage">There are no group members.</div>';
+                    echo '<div class="EmptyMessage">There are no members.</div>';
                 }?>
         </div>
     </div>
