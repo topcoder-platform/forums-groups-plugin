@@ -38,7 +38,6 @@ class GroupController extends VanillaController {
 
         parent::initialize();
 
-        $this->CssClass = 'NoPanel';
         /**
          * The default Cache-Control header does not include no-store, which can cause issues with outdated category
          * information (e.g. counts).  The same check is performed here as in Gdn_Controller before the Cache-Control
@@ -47,6 +46,12 @@ class GroupController extends VanillaController {
         if (Gdn::session()->isValid()) {
             $this->setHeader('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
         }
+
+        // Add modules
+        $this->addModule('NewDiscussionModule');
+        $this->addModule('DiscussionFilterModule');
+        $this->addModule('CategoriesModule');
+        $this->addModule('BookmarkedModule');
     }
 
     /**
