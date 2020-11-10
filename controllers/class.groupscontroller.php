@@ -36,6 +36,11 @@ class GroupsController extends VanillaController {
             $this->setHeader('Cache-Control', 'private, no-cache, no-store, max-age=0, must-revalidate');
         }
 
+        // Add modules
+        $this->addModule('NewDiscussionModule');
+        $this->addModule('DiscussionFilterModule');
+        $this->addModule('CategoriesModule');
+        $this->addModule('BookmarkedModule');
         $this->fireEvent('AfterInitialize');
     }
 
