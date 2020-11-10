@@ -777,6 +777,6 @@ span.file-upload-choose, span.file-upload-browse {
     width: 100%;
 }
 
-.Frame-body .Frame-content .Frame-details .Frame-row-main aside.Panel.Panel-main {
+.Section-GroupList .Frame-body .Frame-content .Frame-details .Frame-row-main aside.Panel.Panel-main {
     display: block;
 }
