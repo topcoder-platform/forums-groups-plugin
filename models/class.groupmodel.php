@@ -660,6 +660,62 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
+     * Can watch group categories
+     *
+     */
+    public function canWatch($group) {
+        if($group->ChallengeID) {
+            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+            return val('Role', $result, false);
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the current user has watched at least one group category
+     * @param $group
+     * @return bool User has watched at least one group category
+     */
+    public function hasWatched($group) {
+        if($group->ChallengeID) {
+            $categoryModel = new CategoryModel();
+            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
+
+            if($groupCategory->DisplayAs !== 'Discussions') {
+                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
+                $categoryIDs = array_column($categories, 'CategoryID');
+            } else {
+                $categoryIDs = [$groupCategory->CategoryID];
+            }
+
+            $userMetaModel = new UserMetaModel();
+            foreach ($categoryIDs as $categoryID) {
+                $newDiscussionKey = 'Preferences.%.NewDiscussion.' . $categoryID;
+                $newCommentKey = 'Preferences.%.NewComment.' . $categoryID;
+                GroupsPlugin::log('hasWatched', ['Group' => $group->GroupID, '$newDiscussionKey' =>  $userMetaModel->getUserMeta(Gdn::session()->UserID, $newDiscussionKey)]);
+                GroupsPlugin::log('hasWatched', ['Group' => $group->GroupID, '$newCommentKey' =>  $userMetaModel->getUserMeta(Gdn::session()->UserID, $newCommentKey)]);
+                $metaData= $userMetaModel->getUserMeta(Gdn::session()->UserID, $newDiscussionKey);
+                foreach ($metaData as $key => $value) {
+                    if($value != null) {
+                        return true;
+                    }
+                }
+
+                $metaData= $userMetaModel->getUserMeta(Gdn::session()->UserID, $newCommentKey);
+                foreach ($metaData as $key => $value) {
+                    if($value != null) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+
+    /**
      * Follow all group's categories
      *
      */
@@ -698,6 +754,62 @@ class GroupModel extends Gdn_Model {
             foreach($categoryIDs as $categoryID) {
                 $categoryModel->follow(Gdn::session()->UserID, $categoryID, false);
             }
+        }
+    }
+
+    /**
+     * Watch all group's categories
+     * @param $group
+     */
+    public function watch($group) {
+        if($group->ChallengeID) {
+            $categoryModel = new CategoryModel();
+            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
+            if($groupCategory->DisplayAs !== 'Discussions') {
+                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, true);
+                $categoryIDs = array_column($categories, 'CategoryID');
+            } else {
+                $categoryIDs = [$groupCategory->CategoryID];
+            }
+            $this->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, 1);
+        }
+    }
+
+    /**
+     * Unwatch all group's categories
+     * @param $group
+     */
+    public function unwatch($group) {
+        if($group->ChallengeID) {
+            $categoryModel = new CategoryModel();
+            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
+            if($groupCategory->DisplayAs !== 'Discussions') {
+                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, true);
+                $categoryIDs = array_column($categories, 'CategoryID');
+            } else {
+                $categoryIDs = [$groupCategory->CategoryID];
+            }
+            $this->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, null);
+        }
+    }
+
+    /**
+     * Set category meta data for user
+     * @param $categoryIDs array of CategoryID
+     * @param $userID
+     * @param $watched 1 - to watch, null - unwatched
+     */
+    private function setCategoryMetaData($categoryIDs, $userID, $watched) {
+        $userMetaModel = new UserMetaModel();
+        foreach($categoryIDs as $categoryID) {
+            $newEmailCommentKey = 'Preferences.Email.NewComment.'.$categoryID;
+            $newEmailDiscussionKey = 'Preferences.Email.NewDiscussion.'.$categoryID;
+            $newPopupCommentKey = 'Preferences.Popup.NewComment.'.$categoryID;
+            $newPopupDiscussionKey = 'Preferences.Popup.NewDiscussion.'.$categoryID;
+            $userMetaModel->setUserMeta($userID, $newEmailCommentKey , $watched);
+            $userMetaModel->setUserMeta($userID, $newEmailDiscussionKey, $watched);
+            $userMetaModel->setUserMeta($userID, $newPopupCommentKey , $watched);
+            $userMetaModel->setUserMeta($userID, $newPopupDiscussionKey , $watched);
         }
     }
 

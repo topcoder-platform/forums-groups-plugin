@@ -23,6 +23,7 @@ class GroupsPlugin extends Gdn_Plugin {
 
     const ROLE_TYPE_TOPCODER = 'topcoder';
     const ROLE_TOPCODER_CONNECT_ADMIN = 'Connect Admin';
+    const ROLE_TOPCODER_ADMINISTRATOR = 'administrator';
     const ROLE_TOPCODER_COPILOT = 'Connect Copilot';
     const ROLE_TOPCODER_MANAGER = 'Connect Manager';
 
@@ -56,14 +57,15 @@ class GroupsPlugin extends Gdn_Plugin {
         }
         $this->structure();
 
-        $this->initDefaultTopcoderRoles();
+        //TODO: remove later
+       // $this->initDefaultTopcoderRoles();
     }
 
     /**
      * Init all default Topcoder roles and set up permissions
      */
     private function initDefaultTopcoderRoles() {
-        $requiredRoles = [self::ROLE_TOPCODER_CONNECT_ADMIN, self::ROLE_TOPCODER_COPILOT, self::ROLE_TOPCODER_MANAGER];
+        $requiredRoles = [self::ROLE_TOPCODER_ADMINISTRATOR, self::ROLE_TOPCODER_CONNECT_ADMIN, self::ROLE_TOPCODER_COPILOT, self::ROLE_TOPCODER_MANAGER];
         $missingRoles = [];
         RoleModel::getByName($requiredRoles, $missingRoles);
         foreach ($missingRoles as $newRole) {
@@ -74,17 +76,31 @@ class GroupsPlugin extends Gdn_Plugin {
         $permissionModel = Gdn::permissionModel();
         $permissionModel->save( [
             'Role' => self::ROLE_TOPCODER_CONNECT_ADMIN,
+            'Type' => self::ROLE_TYPE_TOPCODER,
             self::GROUPS_MODERATION_MANAGE_PERMISSION => 1,
-            self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1
+            self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1,
+            self::GROUPS_GROUP_ADD_PERMISSION => 1,
+            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1
+        ], true);
+
+        $permissionModel->save( [
+            'Role' => self::ROLE_TOPCODER_ADMINISTRATOR,
+            'Type' => self::ROLE_TYPE_TOPCODER,
+            self::GROUPS_MODERATION_MANAGE_PERMISSION => 1,
+            self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1,
+            self::GROUPS_GROUP_ADD_PERMISSION => 1,
+            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1
         ], true);
 
         $permissionModel->save( [
             'Role' => self::ROLE_TOPCODER_COPILOT,
+            'Type' => self::ROLE_TYPE_TOPCODER,
             self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1
         ], true);
 
         $permissionModel->save( [
             'Role' => self::ROLE_TOPCODER_MANAGER,
+            'Type' => self::ROLE_TYPE_TOPCODER,
             self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1
         ], true);
 
@@ -298,7 +314,6 @@ class GroupsPlugin extends Gdn_Plugin {
             $canClose = $groupModel->canCloseDiscussion($Discussion);
             $canMove = $groupModel->canMoveDiscussion($Discussion);
             $canRefetch = $groupModel->canRefetchDiscussion($Discussion);
-
             $options = &$args['DiscussionOptionsDropdown'];
 
             if ($canDelete === false) {
@@ -349,6 +364,13 @@ class GroupsPlugin extends Gdn_Plugin {
 
     public function categoriesController_afterDiscussionFilters_handler($sender){
         $this->addGroupLinkToMenu();
+    }
+
+    // TODO: Add 'Watch/Unwatch' option in a dropdown
+    public function categoriesController_categoryOptionsDropdown_handler($sender, $args) {
+       // $dropdown = &$args['CategoryOptionsDropdown'];
+       // $category = &$args['Category'];
+       // self::log('categoriesController_categoryOptionsDropdown_handler', ['category' => $category]);
     }
 
     /**
