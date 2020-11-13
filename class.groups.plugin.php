@@ -51,10 +51,7 @@ class GroupsPlugin extends Gdn_Plugin {
      *
      */
     public function setup() {
-        // Initial data hasn't been inserted
-        if(!c('Garden.Installed')) {
-            return;
-        }
+
         $this->structure();
 
         //TODO: remove later
