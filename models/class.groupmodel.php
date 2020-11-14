@@ -621,7 +621,7 @@ class GroupModel extends Gdn_Model {
      * Can follow group categories
      *
      */
-    public function canFollow($group) {
+    public function canFollowGroup($group) {
         if($group->ChallengeID) {
             $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
             return val('Role', $result, false);
@@ -634,7 +634,7 @@ class GroupModel extends Gdn_Model {
      * Check if the current user has followed at least one group category
      *
      */
-    public function hasFollowed($group) {
+    public function hasFollowedGroup($group) {
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -663,7 +663,7 @@ class GroupModel extends Gdn_Model {
      * Can watch group categories
      *
      */
-    public function canWatch($group) {
+    public function canWatchGroup($group) {
         if($group->ChallengeID) {
             $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
             return val('Role', $result, false);
@@ -677,7 +677,7 @@ class GroupModel extends Gdn_Model {
      * @param $group
      * @return bool User has watched at least one group category
      */
-    public function hasWatched($group) {
+    public function hasWatchedGroup($group) {
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -689,37 +689,17 @@ class GroupModel extends Gdn_Model {
                 $categoryIDs = [$groupCategory->CategoryID];
             }
 
-            $userMetaModel = new UserMetaModel();
-            foreach ($categoryIDs as $categoryID) {
-                $newDiscussionKey = 'Preferences.%.NewDiscussion.' . $categoryID;
-                $newCommentKey = 'Preferences.%.NewComment.' . $categoryID;
-                GroupsPlugin::log('hasWatched', ['Group' => $group->GroupID, '$newDiscussionKey' =>  $userMetaModel->getUserMeta(Gdn::session()->UserID, $newDiscussionKey)]);
-                GroupsPlugin::log('hasWatched', ['Group' => $group->GroupID, '$newCommentKey' =>  $userMetaModel->getUserMeta(Gdn::session()->UserID, $newCommentKey)]);
-                $metaData= $userMetaModel->getUserMeta(Gdn::session()->UserID, $newDiscussionKey);
-                foreach ($metaData as $key => $value) {
-                    if($value != null) {
-                        return true;
-                    }
-                }
-
-                $metaData= $userMetaModel->getUserMeta(Gdn::session()->UserID, $newCommentKey);
-                foreach ($metaData as $key => $value) {
-                    if($value != null) {
-                        return true;
-                    }
-                }
-            }
+           return $categoryModel->hasWatched($categoryIDs,Gdn::session()->UserID);
         }
 
         return false;
     }
 
-
     /**
      * Follow all group's categories
      *
      */
-    public function follow($group) {
+    public function followGroup($group) {
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -740,7 +720,7 @@ class GroupModel extends Gdn_Model {
      * Unfollow all group's categories
      *
      */
-    public function unfollow($group) {
+    public function unfollowGroup($group) {
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -761,7 +741,7 @@ class GroupModel extends Gdn_Model {
      * Watch all group's categories
      * @param $group
      */
-    public function watch($group) {
+    public function watchGroup($group) {
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -771,7 +751,7 @@ class GroupModel extends Gdn_Model {
             } else {
                 $categoryIDs = [$groupCategory->CategoryID];
             }
-            $this->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, 1);
+            $categoryModel->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, 1);
         }
     }
 
@@ -779,7 +759,7 @@ class GroupModel extends Gdn_Model {
      * Unwatch all group's categories
      * @param $group
      */
-    public function unwatch($group) {
+    public function unwatchGroup($group) {
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -789,29 +769,10 @@ class GroupModel extends Gdn_Model {
             } else {
                 $categoryIDs = [$groupCategory->CategoryID];
             }
-            $this->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, null);
+            $categoryModel->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, null);
         }
     }
 
-    /**
-     * Set category meta data for user
-     * @param $categoryIDs array of CategoryID
-     * @param $userID
-     * @param $watched 1 - to watch, null - unwatched
-     */
-    private function setCategoryMetaData($categoryIDs, $userID, $watched) {
-        $userMetaModel = new UserMetaModel();
-        foreach($categoryIDs as $categoryID) {
-            $newEmailCommentKey = 'Preferences.Email.NewComment.'.$categoryID;
-            $newEmailDiscussionKey = 'Preferences.Email.NewDiscussion.'.$categoryID;
-            $newPopupCommentKey = 'Preferences.Popup.NewComment.'.$categoryID;
-            $newPopupDiscussionKey = 'Preferences.Popup.NewDiscussion.'.$categoryID;
-            $userMetaModel->setUserMeta($userID, $newEmailCommentKey , $watched);
-            $userMetaModel->setUserMeta($userID, $newEmailDiscussionKey, $watched);
-            $userMetaModel->setUserMeta($userID, $newPopupCommentKey , $watched);
-            $userMetaModel->setUserMeta($userID, $newPopupDiscussionKey , $watched);
-        }
-    }
 
     /**
      * Check add group permission
