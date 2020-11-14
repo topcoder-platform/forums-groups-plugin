@@ -394,7 +394,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->follow($Group);
+            $this->GroupModel->followGroup($Group);
             $this->setRedirectTo('group/' . $GroupID);
         }
         $this->render();
@@ -412,7 +412,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->unfollow($Group);
+            $this->GroupModel->unfollowGroup($Group);
             $this->setRedirectTo('group/'.$GroupID);
         }
         $this->render();
@@ -430,7 +430,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->watch($Group);
+            $this->GroupModel->watchGroup($Group);
             $this->setRedirectTo('group/' . $GroupID);
         }
         $this->render();
@@ -449,7 +449,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->unwatch($Group);
+            $this->GroupModel->unwatchGroup($Group);
             $this->setRedirectTo('group/'.$GroupID);
         }
         $this->render();

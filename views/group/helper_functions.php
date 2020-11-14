@@ -58,10 +58,10 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $canInviteMember = $groupModel->canInviteNewMember($group);
         $canManageMembers = $groupModel->canManageMembers($group);
         $canManageCategories = $groupModel->canManageCategories();
-        $canFollow = $groupModel->canFollow($group);
-        $canWatch = $groupModel->canWatch($group);
-        $hasFollowed = $groupModel->hasFollowed($group);
-        $hasWatched = $groupModel->hasWatched($group);
+        $canFollow = $groupModel->canFollowGroup($group);
+        $canWatch = $groupModel->canWatchGroup($group);
+        $hasFollowed = $groupModel->hasFollowedGroup($group);
+        $hasWatched = $groupModel->hasWatchedGroup($group);
         $dropdown
             ->addLinkIf($canEdit, t('Edit'), '/group/edit/'.$groupID, 'edit')
             ->addLinkIf($canLeave, t('Leave'), '/group/leave/'.$groupID, 'leave', 'LeaveGroup Popup')
@@ -70,9 +70,9 @@ if (!function_exists('getGroupOptionsDropdown')) {
             ->addLinkIf($canInviteMember, t('Invite Member'), '/group/invite/'.$groupID, 'invite','InviteGroup Popup')
             ->addLinkIf($canManageMembers, t('Manage Members'), '/group/members/'.$groupID, 'manage')
             ->addLinkIf($canFollow && !$hasFollowed, t('Follow Categories'), '/group/follow/'.$groupID, 'follow','FollowGroup Popup')
-            ->addLinkIf($hasFollowed, t('Unfollow Categories'), '/group/unfollow/'.$groupID, 'unfollow', 'UnfollowGroup Popup');
-          //  ->addLinkIf($canWatch && !$hasWatched, t('Watch Categories'), '/group/watch/'.$groupID, 'watch','WatchGroup Popup')
-          //  ->addLinkIf($hasWatched, t('Unwatch Categories'), '/group/unwatch/'.$groupID, 'unwatch', 'UnwatchGroup Popup');
+            ->addLinkIf($hasFollowed, t('Unfollow Categories'), '/group/unfollow/'.$groupID, 'unfollow', 'UnfollowGroup Popup')
+            ->addLinkIf($canWatch && !$hasWatched, t('Watch Categories'), '/group/watch/'.$groupID, 'watch','WatchGroup Popup')
+            ->addLinkIf($hasWatched, t('Unwatch Categories'), '/group/unwatch/'.$groupID, 'unwatch', 'UnwatchGroup Popup');
        return $dropdown;
     }
 }

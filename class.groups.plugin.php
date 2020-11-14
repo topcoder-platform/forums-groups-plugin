@@ -363,11 +363,22 @@ class GroupsPlugin extends Gdn_Plugin {
         $this->addGroupLinkToMenu();
     }
 
-    // TODO: Add 'Watch/Unwatch' option in a dropdown
-    public function categoriesController_categoryOptionsDropdown_handler($sender, $args) {
-       // $dropdown = &$args['CategoryOptionsDropdown'];
-       // $category = &$args['Category'];
-       // self::log('categoriesController_categoryOptionsDropdown_handler', ['category' => $category]);
+    public function base_categoryOptionsDropdown_handler($sender, $args) {
+        if (!Gdn::session()->isValid()) {
+            return ;
+        }
+        $dropdown = &$args['CategoryOptionsDropdown'];
+        $category = &$args['Category'];
+        if(val('DisplayAs', $category) == 'Discussions') {
+            $categoryModel = new CategoryModel();
+            $categoryID = val('CategoryID', $category);
+            $hasWatched = $categoryModel->hasWatched($categoryID, Gdn::session()->UserID);;
+            $dropdown->addLink(
+                t($hasWatched ? 'Unwatch' : 'Watch'),
+                $hasWatched ? '/category/watched?categoryid='.$categoryID.'&tkey='.Gdn::session()->transientKey() : '/category/watch?categoryid='.$categoryID.'&tkey=' . Gdn::session()->transientKey(),
+                'watch'
+            );
+       }
     }
 
     /**
@@ -403,6 +414,154 @@ class GroupsPlugin extends Gdn_Plugin {
         }
     }
 
+    /**
+     * Allows user to unwatch a category.
+     * Add the Vanilla method to stay in the same page
+     *
+     * @param null $categoryID
+     * @param null $tKey
+     * @throws Gdn_UserException
+     */
+    public function categoryController_watched_create($sender,$categoryID = null, $tKey = null) {
+        $this->watchCategory($sender, $categoryID, null, $tKey);
+    }
+
+    /**
+     * Allows user to watch a category.
+     * Add the Vanilla method to stay in the same page
+     *
+     * @param null $categoryID
+     * @param null $tKey
+     * @throws Gdn_UserException
+     */
+    public function categoryController_watch_create($sender,$categoryID = null, $tKey = null) {
+        $this->watchCategory($sender, $categoryID, 1, $tKey);
+    }
+
+    private function watchCategory($sender, $categoryID = null, $watched = null,  $tKey = null) {
+        // Make sure we are posting back.
+        if (!$sender->Request->isAuthenticatedPostBack() && !Gdn::session()->validateTransientKey($tKey)) {
+            throw permissionException('Javascript');
+        }
+
+        if (!Gdn::session()->isValid()) {
+            throw permissionException('SignedIn');
+        }
+
+        $userID = Gdn::session()->UserID;
+
+        $categoryModel = new CategoryModel();
+        $category = CategoryModel::categories($categoryID);
+        if (!$category) {
+            throw notFoundException('Category');
+        }
+
+        $hasPermission = $categoryModel::checkPermission($categoryID, 'Vanilla.Discussions.View');
+        if (!$hasPermission) {
+            throw permissionException('Vanilla.Discussion.View');
+        }
+
+        $result = $categoryModel->watch($categoryID, $watched);
+        // Set the new value for api calls and json targets.
+        $sender->setData([
+            'UserID' => $userID,
+            'CategoryID' => $categoryID,
+            'Watched' => $result
+        ]);
+
+        switch ($sender->deliveryType()) {
+            case DELIVERY_TYPE_DATA:
+                $sender->render('Blank', 'Utility', 'Dashboard');
+                return;
+            case DELIVERY_TYPE_ALL:
+                // Stay in the previous page
+                if(isset($_SERVER['HTTP_REFERER'])) {
+                    $previous = $_SERVER['HTTP_REFERER'];
+                    redirectTo($previous);
+                } else {
+                    redirectTo('/categories');
+                }
+        }
+
+        // Return the appropriate bookmark.
+        /// require_once $sender->fetchViewLocation('helper_functions', 'Categories');
+        $markup = watchButton($categoryID);
+        $sender->jsonTarget("!element", $markup, 'ReplaceWith');
+        $sender->render('Blank', 'Utility', 'Dashboard');
+    }
+
+    /**
+     * Watch a category
+     * @param CategoryModel $sender
+     */
+    public function categoryModel_watch_create(CategoryModel $sender){
+        $categoryIDs = val(0, $sender->EventArguments);
+        $watched = val(1, $sender->EventArguments);
+        $sender->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, $watched);
+    }
+
+    /**
+     * Set category meta data for user
+     * @param $categoryIDs array of CategoryID
+     * @param $userID
+     * @param $watched 1 - to watch, null - unwatched
+     */
+    public function categoryModel_setCategoryMetaData_create(CategoryModel $sender) {
+        $categoryIDs = val(0, $sender->EventArguments);
+        $userID = val(1, $sender->EventArguments);
+        $watched = val(2, $sender->EventArguments);
+        $userMetaModel = new UserMetaModel();
+        if(is_numeric($categoryIDs) ) {
+            $categoryIDs = [$categoryIDs];
+        }
+        foreach($categoryIDs as $categoryID) {
+            $newEmailCommentKey = 'Preferences.Email.NewComment.'.$categoryID;
+            $newEmailDiscussionKey = 'Preferences.Email.NewDiscussion.'.$categoryID;
+            $newPopupCommentKey = 'Preferences.Popup.NewComment.'.$categoryID;
+            $newPopupDiscussionKey = 'Preferences.Popup.NewDiscussion.'.$categoryID;
+            $userMetaModel->setUserMeta($userID, $newEmailCommentKey , $watched);
+            $userMetaModel->setUserMeta($userID, $newEmailDiscussionKey, $watched);
+            $userMetaModel->setUserMeta($userID, $newPopupCommentKey , $watched);
+            $userMetaModel->setUserMeta($userID, $newPopupDiscussionKey , $watched);
+        }
+        return $sender->hasWatched($categoryIDs,$userID);
+    }
+
+    /**
+     * Check if the current user has watched a category or at least one category from the list
+     *
+     * @param $userID
+     * @param $categoryIDs array|int
+     * @return bool
+     */
+    public function categoryModel_hasWatched_create(CategoryModel $sender) {
+        $categoryIDs = val(0, $sender->EventArguments);
+        $userID = val(1, $sender->EventArguments);
+
+        if(is_numeric($categoryIDs) ) {
+            $categoryIDs = [$categoryIDs];
+        }
+
+        $userMetaModel = new UserMetaModel();
+        foreach ($categoryIDs as $categoryID) {
+            $newDiscussionKey = 'Preferences.%.NewDiscussion.' . $categoryID;
+            $newCommentKey = 'Preferences.%.NewComment.' . $categoryID;
+            $metaData= $userMetaModel->getUserMeta($userID, $newDiscussionKey);
+            foreach ($metaData as $key => $value) {
+                if($value != null) {
+                    return true;
+                }
+            }
+
+            $metaData= $userMetaModel->getUserMeta(Gdn::session()->UserID, $newCommentKey);
+            foreach ($metaData as $key => $value) {
+                if($value != null) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     /**
      * Add Topcoder Roles
      * @param $sender
