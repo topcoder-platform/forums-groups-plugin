@@ -17,6 +17,8 @@ class GroupsPlugin extends Gdn_Plugin {
     const GROUPS_ROUTE = '/groups';
     const GROUP_ROUTE = '/group/';
     const GROUPS_GROUP_ADD_PERMISSION = 'Groups.Group.Add';
+    const GROUPS_GROUP_EDIT_PERMISSION = 'Groups.Group.Edit';
+    const GROUPS_GROUP_DELETE_PERMISSION = 'Groups.Group.Delete';
     const GROUPS_CATEGORY_MANAGE_PERMISSION = 'Groups.Category.Manage';
     const GROUPS_MODERATION_MANAGE_PERMISSION = 'Groups.Moderation.Manage';
     const GROUPS_EMAIL_INVITATIONS_PERMISSION = 'Groups.EmailInvitations.Add';
@@ -155,25 +157,62 @@ class GroupsPlugin extends Gdn_Plugin {
         // nothing
     }
 
-    public function base_render_before($sender) {
-        $sender->addJsFile('vendors/prettify/prettify.js', 'plugins/Groups');
-        $sender->addJsFile('dashboard.js', 'plugins/Groups');
-
-        if(inSection('CategoryList')) {
-            $categoryTree =  $sender->data('CategoryTree');
-            $selectedCategory = $sender->data('Category');
-            if($categoryTree) {
-                $displayedCategoryTree = $this->groupModel->checkGroupCategoryPermissions($categoryTree);
-                $sender->setData('CategoryTree', $displayedCategoryTree);
-            }
-
-            if($selectedCategory) {
-                $displayedCategory = $this->groupModel->checkGroupCategoryPermissions($selectedCategory);
-                $sender->setData('Category', $displayedCategory);
+    /**
+     * Add challenge/Group name in discussion item
+     * @param $sender
+     * @param $args
+     */
+    public function discussionsController_beforeDiscussionMetaData_handler($sender, $args){
+        if($args['Discussion']) {
+            $discussion = $args['Discussion'];
+            if ($discussion->GroupID) {
+                $result = '/group/' . $discussion->GroupID;
+                $url = url($result, true);
+                $groupModel = new GroupModel();
+                $group = $groupModel->getByGroupID($discussion->GroupID);
+                echo '<div class="Meta Meta-Discussion Group-Info">'.
+                        '<span class="MItem ">'.
+                            '<span class="label">Challenge: </span>'.
+                            '<span class="value">'.anchor($group->Name, $url).'</span>'.
+                        '</span>'.
+                    '</div>';
             }
         }
     }
 
+    public function base_render_before($sender) {
+        $sender->addJsFile('vendors/prettify/prettify.js', 'plugins/Groups');
+        $sender->addJsFile('dashboard.js', 'plugins/Groups');
+
+        $categoryModel = new CategoryModel();
+
+        self::log('a list of IDs of categories visible to the current user', ['visibleCategories' => $categoryModel->getVisibleCategories([])]);
+
+    }
+
+    public function base_groupOptionsDropdown_handler($sender, $args){
+        $group = $args['Group'];
+        $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
+        $groupModel = new GroupModel();
+        $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+        $groupID = $group->GroupID;
+        $canEdit = $groupModel->canEdit($group) ;
+        $canDelete = $groupModel->canDelete($group) ;
+        $canLeave = $groupModel->canLeave($group);
+        $canInviteMember = $groupModel->canInviteNewMember($group);
+        $canManageMembers = $groupModel->canManageMembers($group);
+        $canManageCategories = $groupModel->canManageCategories($group);
+        $canFollow = $groupModel->canFollowGroup($group);
+        $canWatch = $groupModel->canWatchGroup($group);
+        $hasFollowed = $groupModel->hasFollowedGroup($group);
+        $hasWatched = $groupModel->hasWatchedGroup($group);
+
+       // self::log('base_groupOptionsDropdown_handler', ['Group' => $group->GroupID,
+       //     'currentUserTopcoderProjectRoles' =>$currentTopcoderProjectRoles,
+       //     'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canLeave' => $canLeave,
+       //    'canInviteMember' =>$canInviteMember, 'canManageMembers' => $canManageMembers, 'canManageCategories ' =>
+       //         $canManageCategories, 'canFollow' => $canFollow ]);
+    }
 
     /**
      * Load CSS into head for the plugin
@@ -198,82 +237,12 @@ class GroupsPlugin extends Gdn_Plugin {
         $cf->renderAll();
     }
 
-    private function discussionModelWhere($requestPath, $args){
-        GroupsPlugin::log('discussionModelWhere:enter', ['Wheres'=> $args['Wheres']]);
-        $wheres = [];
-        if(array_key_exists('Wheres', $args)) {
-            $wheres =  &$args['Wheres'];
-        }
-        if(strpos($requestPath, 'discussions/mine') === 0) {
-            // show all my discussions
-        } else if (strpos($requestPath, 'discussions/bookmarked') === 0) {
-            // show all bookmarked by default
-        } else if (strpos($requestPath, 'discussions') === 0) {
-            $wheres['d.GroupID'] = ['is null'];
-        } else if (strpos($requestPath, 'categories') === 0) {
-            //checkPermissions
-            $groupModel = new GroupModel();
-            $userGroups = $groupModel->memberOf(Gdn::session()->UserID);
-            $publicGroupIDs = $groupModel->getAllPublicGroupIDs();
-            $userGroupsIDs = array();
-            foreach ($userGroups as $userGroup) {
-                array_push($userGroupsIDs, $userGroup->GroupID);
-            }
-            $showGroupsIDs = array_merge($userGroupsIDs, $publicGroupIDs);
-            self::log('discussionModelWhere',  ['userGroups' => $userGroups, 'publicGroupsIDs'=> $publicGroupIDs,  'showGroupIDs' => $showGroupsIDs]);
-            $wheres['d.GroupID'] =  $showGroupsIDs;
-            $wheres['Groups'] = 'all';
-        }
-
-        GroupsPlugin::log('discussionModelWhere:exit', ['Updated Wheres'=> $wheres]);
-
-    }
-
-    public function discussionModel_beforeGet_handler($sender, $args) {
-        GroupsPlugin::log('discussionModel_beforeGet_handler', []);
-        $this->discussionModelWhere(Gdn::request()->path(), $args);
-    }
-
-    public  function discussionModel_beforeGetCount_handler($sender, $args){
-        GroupsPlugin::log('discussionModel_beforeGetCount_handler');
-        $this->discussionModelWhere(Gdn::request()->path(), $args);
-    }
-
-    public  function discussionModel_beforeGetAnnouncements_handler($sender, $args){
-        GroupsPlugin::log('discussionModel_beforeGetAnnouncements_handler');
-        //FIX: it throws exceptions
-        // $this->discussionModelWhere(Gdn::request()->path(), $args);
-    }
-
-    /**
-     * Show categories based on group membership
-     * @param $sender
-     * @param $args
-     */
-    public function base_beforeCategoryDropDown_handler($sender, $args) {
-        self::log('base_beforeCategoryDropDown_hander', ['args' => $args]);
-        $options =  &$args['Options'];
-        $categoryData = val('CategoryData', $options);
-
-        // Grab the category data.
-        if (!$categoryData) {
-            $categoryData = CategoryModel::getByPermission(
-                'Discussions.Add',
-                null,
-                val('Filter', $options, ['Archived' => 0]),
-                val('PermFilter', $options, [])
-            );
-
-            $displayedCategories = $this->groupModel->checkGroupCategoryPermissions($categoryData);
-            $options['CategoryData'] = $displayedCategories;
-            return;
-        }
-    }
-
     public function discussionController_render_before($sender, $args) {
         $Discussion = $sender->data('Discussion');
         if($Discussion && $Discussion->GroupID != null) {
             $groupModel = new GroupModel();
+            $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
+            $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
             $Group = $groupModel->getByGroupID($Discussion->GroupID);
             if (!$groupModel->canView($Group)) {
                 throw permissionException();
@@ -300,11 +269,13 @@ class GroupsPlugin extends Gdn_Plugin {
      */
     public function base_discussionOptionsDropdown_handler($sender, $args){
         $Discussion = $args['Discussion'];
+        $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
         if($Discussion) {
             $groupModel = new GroupModel();
+            $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+            $canView = $groupModel->canView($Discussion);
             $canEdit = $groupModel->canEditDiscussion($Discussion);
             $canDelete = $groupModel->canDeleteDiscussion($Discussion);
-
             $canDismiss = $groupModel->canDismissDiscussion($Discussion);
             $canAnnounce = $groupModel->canAnnounceDiscussion($Discussion);
             $canSink = $groupModel->canSinkDiscussion($Discussion);
@@ -346,8 +317,9 @@ class GroupsPlugin extends Gdn_Plugin {
             }
 
             self::log('discussionController_discussionOptionsDropdown_handler', ['Discussion' => $Discussion->DiscussionID,
-                'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canDiscmiss' => $canDismiss,
-                'canAnnounce' =>$canAnnounce, 'canSink' => $canSink, 'canMove' => $canMove, 'canFetch' => $canRefetch ]);
+                'currentUserTopcoderProjectRoles' =>$currentTopcoderProjectRoles,  'canView' => $canView,
+                'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canDismiss' => $canDismiss,
+                'canAnnounce' =>$canAnnounce, 'canSink' => $canSink, 'canMove' => $canMove, 'canReFetch' => $canRefetch ]);
         }
     }
 
@@ -571,9 +543,9 @@ class GroupsPlugin extends Gdn_Plugin {
         if($sender instanceof DiscussionController || $sender instanceof GroupController) {
             $user = $args['User'];
             $anchorText = &$args['Text'];
-            $resources = $sender->data('Resources');
-            $roleResources = $sender->data('RoleResources');
-            $anchorText = $anchorText . $this->getTopcoderRoles($user, $resources, $roleResources);
+            $resources = $sender->data('ChallengeResources');
+            $roleResources = $sender->data('ChallengeRoleResources');
+            $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
         }
     }
 
@@ -586,16 +558,29 @@ class GroupsPlugin extends Gdn_Plugin {
         if($sender instanceof DiscussionController || $sender instanceof GroupController) {
             $user = $args['User'];
             $anchorText = &$args['Title'];
-            $resources = $sender->data('Resources');
-            $roleResources = $sender->data('RoleResources');
-            $anchorText = $anchorText . $this->getTopcoderRoles($user, $resources, $roleResources);
+            $resources = $sender->data('ChallengeResources');
+            $roleResources = $sender->data('ChallengeRoleResources');
+            $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
         }
     }
 
-    private function getTopcoderRoles($user, $resources = null, $roleResources = null) {
+    private function topcoderProjectRolesText($user, $resources = null, $roleResources = null) {
+       $roles = $this->getTopcoderProjectRoles($user, $resources, $roleResources);
+       return count($roles) > 0 ? '(' . implode(', ', $roles) . ')' : '';
+
+    }
+
+    /**
+     * Get a list of Topcoder Project Roles for an user
+     * @param $user object User
+     * @param array $resources
+     * @param array $roleResources
+     * @return array
+     */
+    private function getTopcoderProjectRoles($user, $resources = null, $roleResources = null) {
         $topcoderUsername = val('Name', $user, t('Unknown'));
+        $roles = [];
         if (isset($resources) && isset($roleResources)) {
-            $roles = [];
             $allResourcesByMember = array_filter($resources, function ($k) use ($topcoderUsername) {
                 return $k->memberHandle == $topcoderUsername;
             });
@@ -605,11 +590,8 @@ class GroupsPlugin extends Gdn_Plugin {
                 });
                 array_push($roles, reset($roleResource)->name);
             }
-            return count($roles) > 0 ? '(' . implode(', ', $roles) . ')' : '';
-
         }
-
-        return '';
+        return $roles;
     }
 
     /**

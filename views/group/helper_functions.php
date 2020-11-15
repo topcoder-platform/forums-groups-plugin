@@ -45,8 +45,9 @@ if (!function_exists('getGroupOptionsDropdown')) {
     function getGroupOptionsDropdown($group = null) {
         $dropdown = new DropdownModule('dropdown', '', 'OptionsMenu');
         $sender = Gdn::controller();
-        $session = Gdn::session();
         $groupModel = new GroupModel();
+        $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
+        $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
         if ($group == null) {
             $group = $sender->data('Group');
         }
@@ -57,7 +58,7 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $canLeave = $groupModel->canLeave($group);
         $canInviteMember = $groupModel->canInviteNewMember($group);
         $canManageMembers = $groupModel->canManageMembers($group);
-        $canManageCategories = $groupModel->canManageCategories();
+        $canManageCategories = $groupModel->canManageCategories($group);
         $canFollow = $groupModel->canFollowGroup($group);
         $canWatch = $groupModel->canWatchGroup($group);
         $hasFollowed = $groupModel->hasFollowedGroup($group);
@@ -73,6 +74,10 @@ if (!function_exists('getGroupOptionsDropdown')) {
             ->addLinkIf($hasFollowed, t('Unfollow Categories'), '/group/unfollow/'.$groupID, 'unfollow', 'UnfollowGroup Popup')
             ->addLinkIf($canWatch && !$hasWatched, t('Watch Categories'), '/group/watch/'.$groupID, 'watch','WatchGroup Popup')
             ->addLinkIf($hasWatched, t('Unwatch Categories'), '/group/unwatch/'.$groupID, 'unwatch', 'UnwatchGroup Popup');
+        // Allow plugins to edit the dropdown.
+        $sender->EventArguments['GroupOptionsDropdown'] = &$dropdown;
+        $sender->EventArguments['Group'] = $group;
+        $sender->fireEvent('GroupOptionsDropdown');
        return $dropdown;
     }
 }
@@ -110,6 +115,8 @@ if (!function_exists('writeGroupMembersWithDetails')) {
      */
     function writeGroupMembersWithDetails($members, $group) {
         $groupModel = new GroupModel();
+        $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
+        $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
 
         foreach ($members as $member) {
             $memberObj = (object)$member;

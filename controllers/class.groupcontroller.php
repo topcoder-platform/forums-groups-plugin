@@ -394,7 +394,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->followGroup($Group);
+            $this->GroupModel->followGroup($Group, Gdn::session()->UserID);
             $this->setRedirectTo('group/' . $GroupID);
         }
         $this->render();
@@ -412,7 +412,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->unfollowGroup($Group);
+            $this->GroupModel->unfollowGroup($Group, Gdn::session()->UserID);
             $this->setRedirectTo('group/'.$GroupID);
         }
         $this->render();
@@ -430,7 +430,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->watchGroup($Group);
+            $this->GroupModel->watchGroup($Group, Gdn::session()->UserID);
             $this->setRedirectTo('group/' . $GroupID);
         }
         $this->render();
@@ -449,7 +449,7 @@ class GroupController extends VanillaController {
         }
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->GroupModel->unwatchGroup($Group);
+            $this->GroupModel->unwatchGroup($Group, Gdn::session()->UserID);
             $this->setRedirectTo('group/'.$GroupID);
         }
         $this->render();
@@ -742,7 +742,7 @@ class GroupController extends VanillaController {
     public function category($GroupID) {
         $Group = $this->findGroup($GroupID);
 
-        if(!$this->GroupModel->canManageCategories()) {
+        if(!$this->GroupModel->canManageCategories($Group)) {
             throw permissionException();
         }
 
@@ -754,6 +754,7 @@ class GroupController extends VanillaController {
         $this->Form->addHidden('DisplayAs', 'Discussions');
         $this->Form->addHidden('AllowFileUploads',1);
         $this->Form->addHidden('UrlCode','');
+        $this->Form->addHidden('GroupID',$GroupID);
         if ($this->Form->authenticatedPostBack(true)) {
             $this->Form->setFormValue('UrlCode', $Group->ChallengeID.'-'.$slugify->slugify($this->Form->getValue('Name'), '-'));
             $newCategoryID = $this->Form->save();
