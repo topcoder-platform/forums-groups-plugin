@@ -157,8 +157,27 @@ class GroupsPlugin extends Gdn_Plugin {
         // nothing
     }
 
-    public function categoryModel_beforeSaveCategory_handler($sender, $args){
-
+    /**
+     * Add challenge/Group name in discussion item
+     * @param $sender
+     * @param $args
+     */
+    public function discussionsController_beforeDiscussionMetaData_handler($sender, $args){
+        if($args['Discussion']) {
+            $discussion = $args['Discussion'];
+            if ($discussion->GroupID) {
+                $result = '/group/' . $discussion->GroupID;
+                $url = url($result, true);
+                $groupModel = new GroupModel();
+                $group = $groupModel->getByGroupID($discussion->GroupID);
+                echo '<div class="Meta Meta-Discussion Group-Info">'.
+                        '<span class="MItem ">'.
+                            '<span class="label">Challenge: </span>'.
+                            '<span class="value">'.anchor($group->Name, $url).'</span>'.
+                        '</span>'.
+                    '</div>';
+            }
+        }
     }
 
     public function base_render_before($sender) {
