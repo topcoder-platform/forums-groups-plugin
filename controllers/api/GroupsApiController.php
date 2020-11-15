@@ -203,7 +203,6 @@ class GroupsApiController extends AbstractApiController {
      * @throws NotFoundException if the group or user could not be found.
      */
     public function delete_members($id, $userid) {
-        $this->permission();
 
         $this->idUserIdParamSchema()->setDescription('Remove a member from a group.');
         $this->schema([], 'out');
@@ -218,9 +217,9 @@ class GroupsApiController extends AbstractApiController {
             throw new NotFoundException('User');
         }
 
-        if(!$this->groupModel->canRemoveMember($group)) {
+       if(!$this->groupModel->canRemoveMember($group)) {
             throw new ClientException('Don\'t have permissions to remove this member from the group.');
-        }
+       }
 
         $this->groupModel->removeMember($group->GroupID, $user->UserID);
     }

@@ -12,6 +12,8 @@
   "settingsPermission": "Garden.Settings.Manage",
   "registerPermissions": [
     "Groups.Group.Add",
+    "Groups.Group.Edit",
+    "Groups.Group.Delete",
     "Groups.Moderation.Manage",
     "Groups.EmailInvitations.Add",
     "Groups.Category.Manage"

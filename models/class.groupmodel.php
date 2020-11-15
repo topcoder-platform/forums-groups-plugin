@@ -16,6 +16,8 @@ class GroupModel extends Gdn_Model {
 
     const ROLE_LEADER = 'leader';
 
+    private $currentUserTopcoderProjectRoles = [];
+
     /**
      * Class constructor. Defines the related database table name.
      */
@@ -24,43 +26,16 @@ class GroupModel extends Gdn_Model {
         $this->fireEvent('Init');
     }
 
+    public function setCurrentUserTopcoderProjectRoles($topcoderProjectRoles = []){
+         $this->currentUserTopcoderProjectRoles = $topcoderProjectRoles;
+    }
+
     /**
      * Clear the groups cache.
      */
     public function clearCache() {
         $key = 'Groups';
         Gdn::cache()->remove($key);
-    }
-
-    /**
-     * Define a group.
-     *
-     * @param $values
-     */
-    public function define($values) {
-        if (array_key_exists('GroupID', $values)) {
-            $groupID = $values['GroupID'];
-            unset($values['GroupID']);
-
-            $this->SQL->replace('Group', $values, ['GroupID' => $groupID], true);
-        } else {
-            // Check to see if there is a group with the same name.
-            $groupID = $this->SQL->getWhere('Group', ['Name' => $values['Name']])->value('GroupID', null);
-
-            if (is_null($groupID)) {
-                // Figure out the next group ID.
-                $maxGroupID = $this->SQL->select('r.GroupID', 'MAX')->from('Group r')->get()->value('GroupID', 0);
-                $groupID = $maxGroupID + 1;
-                $values['GroupID'] = $groupID;
-
-                // Insert the group.
-                $this->SQL->insert('Group', $values);
-            } else {
-                // Update the group.
-                $this->SQL->update('Group', $values, ['GroupID' => $groupID])->put();
-            }
-        }
-        $this->clearCache();
     }
 
     /**
@@ -336,6 +311,23 @@ class GroupModel extends Gdn_Model {
         return $data === false ? 0 : $data->Count;
     }
 
+    public function checkPermission($userID,$groupID,$permissions = null, $fullMatch = false){
+        if(is_array($permissions)) {
+            return $this->isMemberOfGroup($userID,$groupID) && GDN::session()->checkPermission(
+                $permissions,$fullMatch);
+        } else if(is_string($permissions)) {
+            return $this->isMemberOfGroup($userID,$groupID) && GDN::session()->checkPermission(
+                    [$permissions],$fullMatch);
+        }
+
+        return $this->isMemberOfGroup($userID,$groupID) || GDN::session()->checkPermission([
+                GroupsPlugin::GROUPS_GROUP_ADD_PERMISSION,
+                GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION,
+                GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION,
+                GroupsPlugin::GROUPS_EMAIL_INVITATIONS_PERMISSION
+            ],$fullMatch);
+    }
+
     /**
      * Join a new member
      * @param $GroupID
@@ -346,6 +338,8 @@ class GroupModel extends Gdn_Model {
         $Fields = ['Role' => GroupModel::ROLE_MEMBER, 'GroupID' => $GroupID,'UserID' => $UserID, 'DateInserted' => Gdn_Format::toDateTime()];
         if( $this->SQL->getWhere('UserGroup', ['GroupID' => $GroupID,'UserID' => $UserID])->numRows() == 0) {
             $this->SQL->insert('UserGroup', $Fields);
+            $this->followGroup($GroupID, $UserID);
+            $this->watchGroup($GroupID, $UserID);
             $this->notifyJoinGroup($GroupID, $UserID);
         }
     }
@@ -408,7 +402,23 @@ class GroupModel extends Gdn_Model {
      * @return bool|Gdn_DataSet|object|string|void
      */
     public function removeMember($GroupID, $MemberID){
+        $result = $this->unbookmarkGroupDiscussions($GroupID, $MemberID);
+        $this->unwatchGroup($GroupID, $MemberID);
+        $this->unfollowGroup($GroupID, $MemberID);
         return $this->SQL->delete('UserGroup', ['GroupID' => $GroupID, 'UserID' => $MemberID]);
+
+    }
+
+    private function unbookmarkGroupDiscussions($GroupID, $MemberID) {
+        $this->SQL->update(
+                'UserDiscussion ud',
+                ['Bookmarked'=>0]
+            )->leftJoin('Discussion d', 'ud.DiscussionID = d.DiscussionID')
+             ->where('ud.UserID', $MemberID)
+             ->where('d.GroupID', $GroupID)->put();
+        // Update the user's bookmark count
+        $discussionModel = new DiscussionModel();
+        $discussionModel->setUserBookmarkCount($MemberID);
     }
 
     /**
@@ -699,7 +709,11 @@ class GroupModel extends Gdn_Model {
      * Follow all group's categories
      *
      */
-    public function followGroup($group) {
+    public function followGroup($group, $userID) {
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -711,7 +725,7 @@ class GroupModel extends Gdn_Model {
             }
 
             foreach($categoryIDs as $categoryID) {
-                $categoryModel->follow(Gdn::session()->UserID, $categoryID, true);
+                $categoryModel->follow($userID, $categoryID, true);
             }
         }
     }
@@ -720,7 +734,11 @@ class GroupModel extends Gdn_Model {
      * Unfollow all group's categories
      *
      */
-    public function unfollowGroup($group) {
+    public function unfollowGroup($group, $userID) {
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -732,7 +750,7 @@ class GroupModel extends Gdn_Model {
             }
 
             foreach($categoryIDs as $categoryID) {
-                $categoryModel->follow(Gdn::session()->UserID, $categoryID, false);
+                $categoryModel->follow($userID, $categoryID, false);
             }
         }
     }
@@ -741,7 +759,11 @@ class GroupModel extends Gdn_Model {
      * Watch all group's categories
      * @param $group
      */
-    public function watchGroup($group) {
+    public function watchGroup($group, $userID) {
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -751,7 +773,7 @@ class GroupModel extends Gdn_Model {
             } else {
                 $categoryIDs = [$groupCategory->CategoryID];
             }
-            $categoryModel->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, 1);
+            $categoryModel->setCategoryMetaData($categoryIDs, $userID, 1);
         }
     }
 
@@ -759,7 +781,11 @@ class GroupModel extends Gdn_Model {
      * Unwatch all group's categories
      * @param $group
      */
-    public function unwatchGroup($group) {
+    public function unwatchGroup($group, $userID) {
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
@@ -769,7 +795,7 @@ class GroupModel extends Gdn_Model {
             } else {
                 $categoryIDs = [$groupCategory->CategoryID];
             }
-            $categoryModel->setCategoryMetaData($categoryIDs, Gdn::session()->UserID, null);
+            $categoryModel->setCategoryMetaData($categoryIDs, $userID, null);
         }
     }
 
@@ -786,12 +812,28 @@ class GroupModel extends Gdn_Model {
      * Check manage group category permission
      *
      */
-    public function canManageCategories() {
-        return Gdn::session()->checkPermission(GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION);
+    public function canManageCategories($group) {
+        return $this->isProjectCopilot() || $this->isProjectManager() || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION);
     }
 
+    private function isProjectCopilot() {
+       return $this->checkTopcoderProjectRole(RoleModel::ROLE_TOPCODER_PROJECT_COPILOT);
+    }
+
+    private function isProjectManager(){
+        return $this->checkTopcoderProjectRole(RoleModel::ROLE_TOPCODER_PROJECT_MANAGER);
+    }
+
+    private function isProjectObserver(){
+       return $this->checkTopcoderProjectRole(RoleModel::ROLE_TOPCODER_PROJECT_OBSERVER);
+    }
+
+    private function checkTopcoderProjectRole($topcoderProjectRole){
+        return in_array($topcoderProjectRole, $this->currentUserTopcoderProjectRoles);
+    }
 
     /**
+     *
      * Check edit group permission
      *
      */
@@ -800,6 +842,8 @@ class GroupModel extends Gdn_Model {
        $groupRole = val('Role', $result, null);
        if($groupRole == GroupModel::ROLE_LEADER ||
            Gdn::session()->UserID == $group->OwnerID ||
+           $this->isProjectCopilot() || $this->isProjectManager() ||
+           Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_EDIT_PERMISSION) ||
            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
            return true;
        }
@@ -812,7 +856,7 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canDelete($group){
-        return Gdn::session()->UserID == $group->OwnerID;
+        return Gdn::session()->UserID == $group->OwnerID || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_DELETE_PERMISSION);
     }
 
     /**
@@ -918,7 +962,8 @@ class GroupModel extends Gdn_Model {
     public function canAddAnnouncement($group) {
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID == $group->OwnerID) {
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID == $group->OwnerID
+         || $this->isProjectCopilot() || $this->isProjectManager()) {
             return true;
         }
         return false;
@@ -954,7 +999,7 @@ class GroupModel extends Gdn_Model {
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
         $groupRole = val('Role', $result, null);
 
-        if(($canEditDiscussion && $groupRole && $discussion->InsertUserID == Gdn::session()->UserID)
+        if(($groupRole && $discussion->InsertUserID == Gdn::session()->UserID)
             || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
@@ -983,8 +1028,9 @@ class GroupModel extends Gdn_Model {
         $group = $this->getByGroupID($groupID);
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
         $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-                || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID ||
+            $this->isProjectCopilot() || $this->isProjectManager() ||
+            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
         return false;
@@ -1008,8 +1054,10 @@ class GroupModel extends Gdn_Model {
         $group = $this->getByGroupID($groupID);
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
         $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+        if($groupRole === GroupModel::ROLE_LEADER ||
+            Gdn::session()->UserID === $group->OwnerID ||
+            $this->isProjectCopilot() || $this->isProjectManager() ||
+            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
         return false;
@@ -1057,8 +1105,10 @@ class GroupModel extends Gdn_Model {
         $group = $this->getByGroupID($groupID);
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
         $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+        if($groupRole === GroupModel::ROLE_LEADER ||
+            Gdn::session()->UserID === $group->OwnerID ||
+            $this->isProjectCopilot() || $this->isProjectManager() ||
+            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
         return false;
@@ -1082,8 +1132,10 @@ class GroupModel extends Gdn_Model {
         $group = $this->getByGroupID($groupID);
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
         $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+        if($groupRole === GroupModel::ROLE_LEADER ||
+            Gdn::session()->UserID === $group->OwnerID ||
+            $this->isProjectCopilot() || $this->isProjectManager() ||
+            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
         return false;
@@ -1095,19 +1147,6 @@ class GroupModel extends Gdn_Model {
      */
     public function canMoveDiscussion($discussion) {
         // Don't move any discussions
-        /*
-        $groupID = $discussion->GroupID;
-        if(!$groupID ) {
-            return $this->canEditDiscussion($discussion);
-        }
-
-        $group = $this->getByGroupID($groupID);
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
-        } */
         return false;
     }
 
@@ -1164,7 +1203,6 @@ class GroupModel extends Gdn_Model {
             }
         }
     }
-
 
     public function notifyNewGroup($groupID, $groupName) {
         $activityModel = Gdn::getContainer()->get(ActivityModel::class);
