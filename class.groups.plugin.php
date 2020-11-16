@@ -183,12 +183,7 @@ class GroupsPlugin extends Gdn_Plugin {
     public function base_render_before($sender) {
         $sender->addJsFile('vendors/prettify/prettify.js', 'plugins/Groups');
         $sender->addJsFile('dashboard.js', 'plugins/Groups');
-
-        $categoryModel = new CategoryModel();
-
-        self::log('a list of IDs of categories visible to the current user', ['visibleCategories' => $categoryModel->getVisibleCategories([])]);
-
-    }
+     }
 
     public function base_groupOptionsDropdown_handler($sender, $args){
         $group = $args['Group'];
@@ -533,6 +528,44 @@ class GroupsPlugin extends Gdn_Plugin {
             }
         }
         return false;
+    }
+
+    /**
+     *  New discussion has been posted
+     * @param $sender
+     * @param $args
+     */
+    public function discussionModel_beforeNotification_handler($sender, $args) {
+        $data = &$args['Activity'];
+        if(($data['ActivityType'] == 'Discussion' && $data['RecordType'] == 'Discussion')) {
+            $discussion = $args['Discussion'];
+            self::log(' discussionModel_beforeNotification_handler', ['data' => $args['Activity'],
+                'category' => array_values(CategoryModel::getAncestors($discussion['CategoryID']))]);
+            $userModel = new UserModel();
+            $author = $userModel->getID($discussion['InsertUserID']);
+            $category = CategoryModel::categories($discussion['CategoryID']);
+            $categoryName = $category['Name'];
+            $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
+            $dateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
+            $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
+            // Format to Html
+            $story = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
+            $message = $story; // htmlspecialchars(Gdn_Format::plainText($story, 'Html'));
+            // We just converted it to HTML. Make sure everything downstream knows it.
+            // Taking this HTML and feeding it into the Rich Format for example, would be invalid.
+            $data['Format'] = 'Html';
+            $data["Story"] =
+                'You are watching the category ' . $categoryName . ', ' .
+                'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<br/>' .
+                '<span>----------------------------------------------------------------------------</span>' .
+                '<p>' .
+                'Discussion: ' . $discussion['Name'] . '  <br/>' .
+                'Author: ' . $author->Name . ' <br/>' .
+                'Category: ' . implode('›', $categoryBreadcrumbs) . '  <br/>' .
+                'Message: <br/> ' . $message .
+                '</p>' .
+                '<span>----------------------------------------------------------------------------</span>';
+        }
     }
     /**
      * Add Topcoder Roles
