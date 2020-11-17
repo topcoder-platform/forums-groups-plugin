@@ -547,7 +547,7 @@ class GroupsPlugin extends Gdn_Plugin {
             $categoryName = $category['Name'];
             $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
             $dateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
-            $data["HeadlineFormat"] = 'The new discussion has been posted in the category "' . $categoryName . '".';
+            $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
             // Format to Html
             $story = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
             $message = $story; // htmlspecialchars(Gdn_Format::plainText($story, 'Html'));
