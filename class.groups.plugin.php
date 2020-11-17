@@ -535,11 +535,11 @@ class GroupsPlugin extends Gdn_Plugin {
      * @param $sender
      * @param $args
      */
-    public function discussionModel_beforeNotification_handler($sender, $args) {
+    public function discussionModel_beforeRecordAdvancedNotification_handler($sender, $args) {
         $data = &$args['Activity'];
         if(($data['ActivityType'] == 'Discussion' && $data['RecordType'] == 'Discussion')) {
             $discussion = $args['Discussion'];
-            self::log(' discussionModel_beforeNotification_handler', ['data' => $args['Activity'],
+            self::log(' discussionModel_BeforeRecordAdvancedNotification_handler', ['data' => $args['Activity'],
                 'category' => array_values(CategoryModel::getAncestors($discussion['CategoryID']))]);
             $userModel = new UserModel();
             $author = $userModel->getID($discussion['InsertUserID']);
@@ -555,16 +555,65 @@ class GroupsPlugin extends Gdn_Plugin {
             // Taking this HTML and feeding it into the Rich Format for example, would be invalid.
             $data['Format'] = 'Html';
             $data["Story"] =
-                'You are watching the category ' . $categoryName . ', ' .
-                'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<br/>' .
+                '<p>You are watching the category "' . $categoryName . '", ' .
+                'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<p/>' .
                 '<span>----------------------------------------------------------------------------</span>' .
                 '<p>' .
-                'Discussion: ' . $discussion['Name'] . '  <br/>' .
-                'Author: ' . $author->Name . ' <br/>' .
-                'Category: ' . implode('›', $categoryBreadcrumbs) . '  <br/>' .
-                'Message: <br/> ' . $message .
+                    '<span>Discussion: ' . $discussion['Name'] . '</span><br/>' .
+                    '<span>Author: ' . $author->Name . '</span><br/>' .
+                    '<span>Category: ' . implode('›', $categoryBreadcrumbs) . '</span><br/>' .
+                    '<span>Message:</span><br/> ' . $message .
                 '</p>' .
                 '<span>----------------------------------------------------------------------------</span>';
+        }
+    }
+
+    public function commentModel_beforeRecordAdvancedNotification($sender, $args){
+
+        $data = &$args['Activity'];
+        if(($data['ActivityType'] == 'Comment' && $data['RecordType'] == 'Comment')) {
+            $discussion = $args['Discussion'];
+            $comment = $args["Comment"];
+            self::log(' commentModel_beforeNotification_handler', ['data' => $args['Activity'],
+                'category' => array_values(CategoryModel::getAncestors($discussion['CategoryID']))]);
+            $userModel = new UserModel();
+            $discussionAuthor = $userModel->getID($discussion['InsertUserID']);
+            $commentAuthor = $userModel->getID($comment['InsertUserID']);
+            $category = CategoryModel::categories($discussion['CategoryID']);
+            $discussionName = $discussion['Name'];
+            $categoryName = $category['Name'];
+            $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
+            $discussionDateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
+            $commentDateInserted = Gdn_Format::dateFull($comment['DateInserted']);
+            // $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
+            // Format to Html
+            $discussionStory = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
+            $commentStory = condense(Gdn_Format::to($comment['Body'], $comment['Format']));
+            // We just converted it to HTML. Make sure everything downstream knows it.
+            // Taking this HTML and feeding it into the Rich Format for example, would be invalid.
+            $data['Format'] = 'Html';
+            $data["Story"] =
+                '<p>You are watching the discussion "' . $discussionName . '" in the category "' .$categoryName.'" '.
+                'which was updated ' . $commentDateInserted . ' by ' . $commentAuthor->Name . ':</p>' .
+                '<span>----------------------------------------------------------------------------</span>' .
+                '<p>Message: </p>' .
+                '<p>' .
+                     $commentStory .
+                '</p>'.
+                '<span>----------------------------------------------------------------------------</span>';
+            $parentCommentID = (int)$comment['ParentCommentID'];
+            if($parentCommentID > 0) {
+                $commentModel = new CommentModel();
+                $parentComment = $commentModel->getID($parentCommentID, DATASET_TYPE_ARRAY);
+                $parentCommentAuthor = $userModel->getID($comment['InsertUserID']);
+                $parentCommentStory = condense(Gdn_Format::to($parentComment['Body'], $parentComment['Format']));
+                $data['Story'] .=
+                    '<p>Original Message (by '.$parentCommentAuthor->Name.' ):</p>'.
+                    '<p>' .
+                        $parentCommentStory.
+                    '</p>' .
+                    '<span>----------------------------------------------------------------------------</span>';
+            }
         }
     }
     /**
