@@ -58,7 +58,7 @@ if (!function_exists('writeGroups')) {
     }
 }
 
-if (!function_exists('writeGroup')) :
+if (!function_exists('writeGroup')) {
 
     /**
      *
@@ -84,7 +84,7 @@ if (!function_exists('writeGroup')) :
             <span class="Options">
                 <div class="Buttons">
                   <?php
-                    if($group->Type == GroupModel::TYPE_PUBLIC && hasJoinedGroup($group->GroupID) == null) {
+                    if($group->Privacy == GroupModel::PRIVACY_PUBLIC && hasJoinedGroup($group->GroupID) == null) {
                         echo anchor('Join', '/group/join/' . $group->GroupID, 'Button Popup', '');
                     }
 
@@ -109,4 +109,82 @@ if (!function_exists('writeGroup')) :
         </li>
     <?php
     }
-endif;
+
+}
+
+if(!function_exists('writeGroupSection1')) {
+
+    function writeGroupSection1($Groups, $sender, $sectionTitle, $noDataText, $moreDataText, $moreDataLink){
+        echo '<div class="media-list-container Group-Box my-groups">';
+        echo '<div class="">';
+        echo '<h2 class="H HomepageTitle">'.$sectionTitle.'</h2>';
+        echo '</div>';
+
+        if ($Groups->numRows() > 0 ) {
+            ?>
+            <ul class="media-list DataList">
+                <?php echo writeGroups($Groups, $sender); ?>
+            </ul>
+            <div class="MoreWrap"> <?php echo anchor($moreDataText, $moreDataLink, 'MoreWrap');?></div>
+            <?php
+        } else {
+            ?>
+            <div class="Empty"><?php echo $noDataText; ?></div>
+            <?php
+        }
+        echo '</div>';
+    }
+}
+
+if(!function_exists('buildGroupPagerOptions')) {
+    function buildGroupPagerOptions($Groups, $Pager){
+        $pagerOptions = ['Wrapper' => '<span class="PagerNub">&#160;</span><div %1$s>%2$s</div>', 'RecordCount' => $Pager->TotalRecords,
+            'CurrentRecords' => $Groups->numRows()];
+
+        return $pagerOptions;
+    }
+}
+
+if(!function_exists('writeGroupSection')) {
+
+    function writeGroupSection($Groups, $Pager = null, $sectionTitle, $noDataText, $moreDataText, $moreDataLink, $sender){
+        echo '<div class="media-list-container Group-Box my-groups">';
+        echo '<div class="">';
+        echo '<h2 class="H HomepageTitle">'.$sectionTitle.'</h2>';
+        echo '</div>';
+
+        if($Pager) {
+            $PagerOptions = buildGroupPagerOptions($Groups, $Pager);
+            PagerModule::current($Pager);
+        }
+
+        if ($Groups->numRows() > 0 ) {  ?>
+            <?php
+            if($Pager) {
+                echo '<div class="PageControls">';
+                PagerModule::write($PagerOptions);
+                echo '</div>';
+            }
+            ?>
+            <ul class="media-list DataList">
+                <?php echo writeGroups($Groups, $sender); ?>
+            </ul>
+            <?php
+                if($Pager) {
+                    echo '<div class="PageControls Bottom">';
+                    PagerModule::write($PagerOptions);
+                    echo '</div>';
+                } else { ?>
+                    <div class="MoreWrap"> <?php echo anchor($moreDataText, $moreDataLink, 'MoreWrap');?></div>
+                <?php
+                }
+            ?>
+            <?php
+        } else {
+            ?>
+            <div class="Empty"><?php echo $noDataText; ?></div>
+            <?php
+        }
+        echo '</div>';
+    }
+}

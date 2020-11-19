@@ -16,7 +16,8 @@
     "Groups.Group.Delete",
     "Groups.Moderation.Manage",
     "Groups.EmailInvitations.Add",
-    "Groups.Category.Manage"
+    "Groups.Category.Manage",
+    "Groups.Group.Archive"
   ],
   "authors": [
     {

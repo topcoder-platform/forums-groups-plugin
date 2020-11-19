@@ -15,8 +15,12 @@ if (!class_exists('Cocur\Slugify\Slugify')){
 
 class GroupsPlugin extends Gdn_Plugin {
     const GROUPS_ROUTE = '/groups';
+    const ROUTE_MY_GROUPS = '/groups/mine';
+    const ROUTE_CHALLENGE_GROUPS = '/groups?filter=challenge'; //'/groups/challenges';
+    const ROUTE_REGULAR_GROUPS = '/groups?filter=regular'; //'/groups/regulars';
     const GROUP_ROUTE = '/group/';
     const GROUPS_GROUP_ADD_PERMISSION = 'Groups.Group.Add';
+    const GROUPS_GROUP_ARCHIVE_PERMISSION = 'Groups.Group.Archive';
     const GROUPS_GROUP_EDIT_PERMISSION = 'Groups.Group.Edit';
     const GROUPS_GROUP_DELETE_PERMISSION = 'Groups.Group.Delete';
     const GROUPS_CATEGORY_MANAGE_PERMISSION = 'Groups.Category.Manage';
@@ -79,7 +83,8 @@ class GroupsPlugin extends Gdn_Plugin {
             self::GROUPS_MODERATION_MANAGE_PERMISSION => 1,
             self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1,
             self::GROUPS_GROUP_ADD_PERMISSION => 1,
-            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1
+            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1,
+            self::GROUPS_GROUP_ARCHIVE_PERMISSION => 1
         ], true);
 
         $permissionModel->save( [
@@ -88,7 +93,8 @@ class GroupsPlugin extends Gdn_Plugin {
             self::GROUPS_MODERATION_MANAGE_PERMISSION => 1,
             self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1,
             self::GROUPS_GROUP_ADD_PERMISSION => 1,
-            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1
+            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1,
+            self::GROUPS_GROUP_ARCHIVE_PERMISSION => 1
         ], true);
 
         $permissionModel->save( [
@@ -165,11 +171,15 @@ class GroupsPlugin extends Gdn_Plugin {
     public function discussionsController_beforeDiscussionMetaData_handler($sender, $args){
         if($args['Discussion']) {
             $discussion = $args['Discussion'];
-            if ($discussion->GroupID) {
-                $result = '/group/' . $discussion->GroupID;
+            $groupModel = new GroupModel();
+            $groupID = $groupModel->findGroupIDFromDiscussion($discussion);
+            GroupsPlugin::log('discussionsController_beforeDiscussionMetaData_handler', [
+                'GroupID' => $groupID]);
+            if ($groupID) {
+                $result = '/group/' . $groupID;
                 $url = url($result, true);
-                $groupModel = new GroupModel();
-                $group = $groupModel->getByGroupID($discussion->GroupID);
+
+                $group = $groupModel->getByGroupID($groupID);
                 echo '<div class="Meta Meta-Discussion Group-Info">'.
                         '<span class="MItem ">'.
                             '<span class="label">Challenge: </span>'.
@@ -234,11 +244,13 @@ class GroupsPlugin extends Gdn_Plugin {
 
     public function discussionController_render_before($sender, $args) {
         $Discussion = $sender->data('Discussion');
-        if($Discussion && $Discussion->GroupID != null) {
+        if($Discussion) {
             $groupModel = new GroupModel();
             $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
             $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
-            $Group = $groupModel->getByGroupID($Discussion->GroupID);
+            $groupID = $groupModel->findGroupIDFromDiscussion($Discussion);
+            self::log('discussionController_render_before:GroupID='.$groupID, []);
+            $Group = $groupModel->getByGroupID($groupID);
             if (!$groupModel->canView($Group)) {
                 throw permissionException();
             }
@@ -318,16 +330,8 @@ class GroupsPlugin extends Gdn_Plugin {
         }
     }
 
-    public function discussionsController_afterDiscussionFilters_handler($sender){
-        $this->addGroupLinkToMenu();
-    }
-
-    public function discussionController_afterDiscussionFilters_handler($sender){
-        $this->addGroupLinkToMenu();
-    }
-
-    public function categoriesController_afterDiscussionFilters_handler($sender){
-        $this->addGroupLinkToMenu();
+    public function base_afterDiscussionFilters_handler($sender){
+        $this->addGroupLinkToMenu($sender);
     }
 
     public function base_categoryOptionsDropdown_handler($sender, $args) {
@@ -355,9 +359,9 @@ class GroupsPlugin extends Gdn_Plugin {
      */
     public function discussionController_discussionInfo_handler($sender, $args) {
         if($sender->Data['Discussion']) {
-            $groupID = $sender->Data['Discussion']->GroupID;
+            $groupModel = new GroupModel();
+            $groupID = $groupModel->findGroupIDFromDiscussion($sender->Data['Discussion']);
             if($groupID) {
-                $groupModel = new GroupModel();
                 $group = $groupModel->getByGroupID($groupID);
                 if($group->ChallengeUrl) {
                     echo anchor($group->Name, $group->ChallengeUrl);
@@ -374,10 +378,12 @@ class GroupsPlugin extends Gdn_Plugin {
             return;
         }
         $discussion= $args['Discussion'];
+        $groupModel = new GroupModel();
+        $groupID = $groupModel->findGroupIDFromDiscussion($discussion);
         if ($sender->deliveryType() == DELIVERY_TYPE_ALL) {
-            redirectTo(GroupsPlugin::GROUP_ROUTE.$discussion->GroupID);
+            redirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
         } else {
-            $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$discussion->GroupID);
+            $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
         }
     }
 
@@ -679,10 +685,21 @@ class GroupsPlugin extends Gdn_Plugin {
     /**
      * Display a groups link in the menu
      */
-    private function addGroupLinkToMenu() {
+    private function addGroupLinkToMenu($sender) {
         if(Gdn::session()->isValid()) {
-            echo '<li>'. anchor('Challenges', GroupsPlugin::GROUPS_ROUTE).'</li>';
+
+            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenges', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
+            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Groups', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
+           // echo '<li class="'.$this->getMenuItemCssClassFromRequestMethod($sender, 'mine').'">'. anchor('My Challenges & Groups', GroupsPlugin::ROUTE_MY_GROUPS).'</li>';
         }
+    }
+
+    private function getMenuItemCssClassFromRequestMethod($sender, $requestMethod){
+        return $sender->ControllerName == 'groupscontroller' && $sender->RequestMethod == $requestMethod ? ' Active' : '';
+    }
+
+    private function getMenuItemCssClassFromQuery($sender, $requestMethod){
+        return $sender->ControllerName == 'groupscontroller' && Gdn::request()->get('filter') == $requestMethod ? ' Active' : '';
     }
 
     public static function log($message, $data= []) {

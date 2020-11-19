@@ -148,6 +148,23 @@ paths:
               $ref: '#/components/schemas/GroupMemberPost'
         required: true
       summary: Add member to a group.
+  '/groups/{id}/archive':
+    put:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Success
+      tags:
+        - Groups
+      requestBody:
+        required: false
+      summary: Archive a group.
 components:
   requestBodies:
     GroupPost:
@@ -180,15 +197,22 @@ components:
           description: The name of the group.
           minLength: 1
           type: string
+        privacy:
+          description: The privacy of this group
+          minLength: 1
+          enum:
+            - public
+            - private
+            - secret
         type:
           description: The type of this group
           minLength: 1
           enum:
-          - public
-          - private
-          - secret
+          - challenge
+          - regular
       required:
       - groupID
+      - privacy
       - type
       - name
       - challengeID
@@ -200,14 +224,20 @@ components:
           description: The name of the group.
           minLength: 1
           type: string
-        type:
+        privacy:
           type: string
-          description: The type of the group
+          description: The privacy of the group
           minLength: 1
           enum:
           - public
           - private
           - secret
+        type:
+          description: The type of this group
+          minLength: 1
+          enum:
+            - challenge
+            - regular
         description:
           description: The description of the group.
           minLength: 1
@@ -221,6 +251,7 @@ components:
       required:
         - name
         - type
+        - privacy
         - description
         - challengeID
         - challengeUrl
