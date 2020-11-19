@@ -102,6 +102,7 @@ class GroupController extends VanillaController {
             throw permissionException();
         }
         $this->title(t('New Challenge'));
+
         // Use the edit form without groupID
         $this->View = 'Edit';
         $this->edit();
@@ -154,6 +155,9 @@ class GroupController extends VanillaController {
         }
         $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name ? $Group->Name: $this->title() ]]);
+
+        $typesData = [GroupModel::TYPE_REGULAR => GroupModel::TYPE_REGULAR, GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
+        $this->setData('Types', $typesData);
 
         // Set the model on the form.
         $this->Form->setModel($this->GroupModel);

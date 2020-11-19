@@ -57,7 +57,12 @@ class GroupsApiController extends AbstractApiController {
                     'field' => 'ChallengeID'
                 ],
             ],
-
+            'privacy:s?' => [
+                'description' => 'Filter by group privacy.',
+                'x-filter' => [
+                    'field' => 'Privacy'
+                ],
+            ],
             'type:s?' => [
                 'description' => 'Filter by group type.',
                 'x-filter' => [
@@ -194,6 +199,29 @@ class GroupsApiController extends AbstractApiController {
         $this->groupModel->join($group->GroupID, $user->UserID);
     }
 
+    /**
+     * Archive a group.
+     *
+     * @param int $id The ID of the group.
+     * @throws NotFoundException if the group could not be found.
+     * @throws ServerException If the group could not be archived.
+     * @return
+     */
+    public function post_archive($id, array $body) {
+        $this->idParamSchema();
+
+        $group = $this->groupModel->getByGroupID($id);
+        if(!$group) {
+            throw new NotFoundException('Group');
+        }
+
+        if(!$this->groupModel->canArchiveGroup($group)) {
+            throw new ClientException('Don\'t have permissions to archive this group.');
+        }
+
+        $this->groupModel->archiveGroup($group->GroupID);
+    }
+
 
     /**
      * Remove a member from a group
@@ -284,8 +312,11 @@ class GroupsApiController extends AbstractApiController {
       return  $this->schema(Schema::parse([
             'name:s' => 'The name of the group.',
             'type:s' =>             [
-                'enum' => [GroupModel::TYPE_SECRET, GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE],
-                'description' => 'Type of the group'],
+              'enum' => [GroupModel::TYPE_CHALLENGE, GroupModel::TYPE_REGULAR],
+              'description' => 'Type of the group'],
+            'privacy:s' =>             [
+                'enum' => [GroupModel::PRIVACY_SECRET, GroupModel::PRIVACY_PUBLIC, GroupModel::PRIVACY_PRIVATE],
+                'description' => 'Privacy of the group'],
             'description:s' => 'Description of the group',
             'challengeID:s?' => 'The challengeID of the Topcoder challenge.',
             'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
@@ -300,7 +331,8 @@ class GroupsApiController extends AbstractApiController {
      */
     public function groupPatchSchema() {
         return  $this->schema(Schema::parse([
-            'name:s' => 'The name of the group.',
+            'name:s?' => 'The name of the group.',
+            'archived:i?' => 'The archived status of the group.',
         ]), 'GroupPatch');
     }
 
@@ -313,10 +345,11 @@ class GroupsApiController extends AbstractApiController {
         return Schema::parse([
             'groupID:i' => 'The ID of the group.',
             'type:s' => 'Type of the group',
+            'privacy:s' => 'Privacy of the group',
+            'archived:i' => 'Archived status of the group',
             'name:s' => 'The name of the group.',
             'challengeID:s?' => 'The challengeID of the Topcoder challenge.',
             'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
         ]);
     }
-
 }

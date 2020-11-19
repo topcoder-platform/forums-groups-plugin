@@ -44,66 +44,132 @@ class GroupsController extends VanillaController {
         $this->fireEvent('AfterInitialize');
     }
 
-    public function index() {
-        // Setup head
+    public function setFilterPageData($filter) {
+        if($filter == 'challenge') {
+            $this->View = 'index';
+            $this->title('Challenges');
+            $this->setData('Title', 'My Challenges');
+            $this->setData('AddButtonTitle', 'Challenge');
+            $this->setData('AvailableGroupTitle', 'Available Challenges');
+            $this->setData('MyGroupButtonTitle', 'All My Challenges');
+            $this->setData('AllGroupButtonTitle', 'All Available Challenges');
+            $this->SetData('MyGroupButtonLink', '/groups/mine/?filter=challenge');
+            $this->setData('AllGroupButtonLink', '/groups/all/?filter=challenge');
+            $this->setData('NoGroups', 'No challenges were found.');
+            $this->setData('Breadcrumbs', [
+                ['Name' => 'Challenges', 'Url' => GroupsPlugin::ROUTE_CHALLENGE_GROUPS]]);
+        } else if($filter == 'regular' ) {
+            $this->View = 'index';
+            $this->title('Groups');
+            $this->setData('Title', 'My Groups');
+            $this->setData('AddButtonTitle', 'Group');
+            $this->setData('MyGroupButtonTitle', 'All My Groups');
+            $this->setData('AllGroupButtonTitle', 'All Available Groups');
+            $this->setData('AvailableGroupTitle', 'Available Groups');
+            $this->SetData('MyGroupButtonLink', '/groups/mine/?filter=regular');
+            $this->setData('AllGroupButtonLink', '/groups/all/?filter=regular');
+            $this->setData('NoGroups','No groups were found.');
+            $this->setData('Breadcrumbs', [
+                ['Name' => t('Groups'), 'Url' =>  GroupsPlugin::ROUTE_REGULAR_GROUPS]]);
+        }
+    }
+
+    public function index($Page=false, $filter) {
+        DashboardNavModule::getDashboardNav()->setHighlightRoute('groups/challenges');
+        $this->Menu->highlightRoute('groups/challenges');
         Gdn_Theme::section('GroupList');
 
-        $this->title(t('Challenges'));
-        $this->setData('Breadcrumbs', [['Name' => 'Challenges', 'Url' => GroupsPlugin::GROUPS_ROUTE]]);
-
         $GroupModel = new GroupModel();
+        $GroupModel->setFilters(Gdn::request()->get());
+        $this->setFilterPageData($filter);
+        $filters =  $GroupModel->getFiltersFromKeys($GroupModel->getFilters());
 
-        $this->GroupData = $GroupModel->getMyGroups(false, '', false,  0);
-        $this->AvailableGroupData = $GroupModel->getAvailableGroups(false, '', false,  0);
+        // Filter wasn't found.
+        // TODO: redirect to a default page
+        if(count($filters) == 0) {
+           redirectTo(GroupsPlugin::ROUTE_MY_GROUPS);
+        }
+
+        $where =  $filters[0]['where'];
+        GroupsPlugin::log('index:filter', ['filters' => $filters, 'where' =>$where]);
+        list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
+        $defaultSort = $GroupModel::getAllowedSorts()['new']['orderBy'];
+        $GroupData = $GroupModel->getMyGroups($where, $defaultSort, $Limit, $Offset);
+        $countOfGroups = $GroupModel->countMyGroups($where);
+        $AvailableGroupData = $GroupModel->getAvailableGroups($where, $defaultSort, $Limit, $Offset);
 
         $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
-        $this->setData('Groups', $this->GroupData, true);
-        $this->setData('AvailableGroups', $this->AvailableGroupData, true);
+        $this->setData('Groups', $GroupData);
+
+        $this->setData('CountOfGroups', $countOfGroups);
+        $this->setData('AvailableGroups', $AvailableGroupData);
+        $this->render();
+    }
+
+    public function mine($Page = false,$filter ='') {
+        if($filter != '') {
+            $this->mygroups($Page, $filter);
+            return;
+        }
+
+        Gdn_Theme::section('GroupList');
+
+        list($Offset, $Limit) = offsetLimit(0, c('Vanilla.Groups.PerPage', 30), true);
+
+        $this->title(t('My Challenges & Groups'));
+        $this->setData('Breadcrumbs', [
+            ['Name' => t('My Challenges & Groups'), 'Url' => GroupsPlugin::ROUTE_MY_GROUPS]]);
+
+        $GroupModel = new GroupModel();
+        $challengeGroupsWhere = $GroupModel::getAllowedFilters()['filter']['filters']['challenge']['where'];
+        $defaultSort = $GroupModel::getAllowedSorts()['new']['orderBy'];
+        GroupsPlugin::log('mine:filter', ['filters' => $challengeGroupsWhere]);
+        $challengeGroupsData = $GroupModel->getMyGroups($challengeGroupsWhere, $defaultSort, $Limit, $Offset);
+        $countOfChallengeGroups = $GroupModel->countMyGroups($challengeGroupsWhere);
+        $this->setData('CountOfChallengeGroups', $countOfChallengeGroups);
+        $this->setData('ChallengeGroups', $challengeGroupsData);
+
+        $regularGroupsWhere = $GroupModel::getAllowedFilters()['filter']['filters']['regular']['where'];
+        $regularGroupsData = $GroupModel->getMyGroups($regularGroupsWhere, $defaultSort, $Limit, $Offset);
+        $countOfRegularGroups = $GroupModel->countMyGroups($regularGroupsWhere);
+        $this->setData('RegularGroups', $regularGroupsData);
+        $this->setData('CountOfRegularGroups', $countOfRegularGroups);
+        $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
 
         $this->render();
     }
 
-    public function mine($Page = false) {
+    private function mygroups($Page = false, $filter = '') {
         // Setup head
-        $this->allowJSONP(true);
         Gdn_Theme::section('GroupList');
 
         // Determine offset from $Page
         list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
         $Page = pageNumber($Offset, $Limit);
-
-        // Allow page manipulation
-        $this->EventArguments['Page'] = &$Page;
-        $this->EventArguments['Offset'] = &$Offset;
-        $this->EventArguments['Limit'] = &$Limit;
-        $this->fireEvent('AfterPageCalculation');
-
-        // Set canonical URL
-        $this->canonicalUrl(url(concatSep('/', '/groups/mine', pageNumber($Offset, $Limit, true, false)), true));
-
-        $this->title(t('My Challenges'));
-        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => t('My Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/mine']]);
-
         $GroupModel = new GroupModel();
+        $GroupModel->setFilters(Gdn::request()->get());
+        $filters =  $GroupModel->getFiltersFromKeys($GroupModel->getFilters());
 
-        $where = false;
-        $this->GroupData = $GroupModel->getMyGroups($where, '', $Limit, $Offset);
+        // Filter wasn't found.
+        // TODO: redirect to a default page
+        if(count($filters) == 0) {
+            redirectTo(GroupsPlugin::ROUTE_MY_GROUPS);
+        }
 
+        $defaultSort = $GroupModel::getAllowedSorts()['new']['orderBy'];
+        $where = $filters[0]['where'];
+        $GroupData = $GroupModel->getMyGroups($where, $defaultSort, $Limit, $Offset);
         $CountGroups = $GroupModel->countMyGroups($where);
         $this->setData('CountGroups', $CountGroups);
-        $this->setData('Groups', $this->GroupData, true);
+        $this->setData('Groups', $GroupData, true);
         $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
-        $this->setJson('Loading', $Offset.' to '.$Limit);
 
         // Build a pager
         $PagerFactory = new Gdn_PagerFactory();
-        $this->EventArguments['PagerType'] = 'Pager';
-        $this->fireEvent('BeforeBuildPager');
         if (!$this->data('_PagerUrl')) {
             $this->setData('_PagerUrl', '/groups/mine/{Page}');
         }
-        $queryString = '';// DiscussionModel::getSortFilterQueryString($DiscussionModel->getSort(), $DiscussionModel->getFilters());
+        $queryString = GroupModel::getSortFilterQueryString($GroupModel->getSort(), $GroupModel->getFilters());
         $this->setData('_PagerUrl', $this->data('_PagerUrl').$queryString);
         $this->Pager = $PagerFactory->getPager($this->EventArguments['PagerType'], $this);
         $this->Pager->ClientID = 'Pager';
@@ -118,61 +184,60 @@ class GroupsController extends VanillaController {
 
         $this->setData('_Page', $Page);
         $this->setData('_Limit', $Limit);
-        $this->fireEvent('AfterBuildPager');
+
+        if($filter == 'regular') {
+            $title = 'My Groups';
+            $noDataText = 'No groups were found.';
+            $this->setData('Breadcrumbs', [
+                ['Name' => 'Groups', 'Url' =>  '/groups/'.$queryString],
+                ['Name' => $title, 'Url' =>  '/groups/mine/'.$queryString]]);
+        } else if($filter == 'challenge'){
+            $title = 'My Challenges';
+            $noDataText = 'No challenges were found.';
+            $this->setData('Breadcrumbs', [
+                ['Name' => 'Challenges', 'Url' =>  '/groups/'.$queryString],
+                ['Name' => $title, 'Url' =>  '/groups/mine/'.$queryString]]);
+
+        }
+        $this->setData('Title', $title);
+        $this->setData('NoDataText',$noDataText);
 
         $this->View = 'list';
-
-        // Deliver JSON data if necessary
-        if ($this->_DeliveryType != DELIVERY_TYPE_ALL) {
-            $this->setJson('LessRow', $this->Pager->toString('less'));
-            $this->setJson('MoreRow', $this->Pager->toString('more'));
-            $this->View = 'groups';
-        }
 
         $this->render();
     }
 
-    public function all($Page = false) {
+    public function all($Page = false, $filter = '') {
         // Setup head
-        $this->allowJSONP(true);
         Gdn_Theme::section('GroupList');
 
         // Determine offset from $Page
         list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
         $Page = pageNumber($Offset, $Limit);
-
-        // Allow page manipulation
-        $this->EventArguments['Page'] = &$Page;
-        $this->EventArguments['Offset'] = &$Offset;
-        $this->EventArguments['Limit'] = &$Limit;
-        $this->fireEvent('AfterPageCalculation');
-
-        // Set canonical URL
-        $this->canonicalUrl(url(concatSep('/', '/groups/all', pageNumber($Offset, $Limit, true, false)), true));
-
-        $this->title(t('Available Challenges'));
-        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => t('Available Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE.'/all']]);
-
         $GroupModel = new GroupModel();
+        $GroupModel->setFilters(Gdn::request()->get());
+        $filters =  $GroupModel->getFiltersFromKeys($GroupModel->getFilters());
 
-        $where = false;
-        $this->GroupData = $GroupModel->getAvailableGroups($where, '', $Limit, $Offset);
+        // Filter wasn't found.
+        // TODO: redirect to a default page
+        if(count($filters) == 0) {
+            redirectTo(GroupsPlugin::ROUTE_CHALLENGE_GROUPS);
+        }
 
+        $defaultSort = $GroupModel::getAllowedSorts()['new']['orderBy'];
+        $where = $filters[0]['where'];
+        $GroupData = $GroupModel->getAvailableGroups($where, $defaultSort, $Limit, $Offset);
         $CountGroups = $GroupModel->countAvailableGroups($where);
         $this->setData('CountGroups', $CountGroups);
-        $this->setData('Groups', $this->GroupData, true);
+        $this->setData('Groups', $GroupData, true);
         $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
-        $this->setJson('Loading', $Offset.' to '.$Limit);
 
         // Build a pager
         $PagerFactory = new Gdn_PagerFactory();
-        $this->EventArguments['PagerType'] = 'Pager';
-        $this->fireEvent('BeforeBuildPager');
         if (!$this->data('_PagerUrl')) {
             $this->setData('_PagerUrl', '/groups/all/{Page}');
         }
-        $queryString = '';
+        $queryString = GroupModel::getSortFilterQueryString($GroupModel->getSort(), $GroupModel->getFilters());
         $this->setData('_PagerUrl', $this->data('_PagerUrl').$queryString);
         $this->Pager = $PagerFactory->getPager($this->EventArguments['PagerType'], $this);
         $this->Pager->ClientID = 'Pager';
@@ -187,16 +252,26 @@ class GroupsController extends VanillaController {
 
         $this->setData('_Page', $Page);
         $this->setData('_Limit', $Limit);
-        $this->fireEvent('AfterBuildPager');
+
+        if($filter == 'regular') {
+            $title = 'Available Groups';
+            $noDataText = 'No groups were found.';
+            $this->setData('Breadcrumbs', [
+                ['Name' => 'Groups', 'Url' =>  '/groups/'.$queryString],
+                ['Name' => $title, 'Url' =>  '/groups/all/'.$queryString]]);
+
+        } else if($filter == 'challenge'){
+            $title = 'Available Challenges';
+            $noDataText = 'No challenges were found.';
+            $this->setData('Breadcrumbs', [
+                ['Name' => 'Challenges', 'Url' =>  '/groups/'.$queryString],
+                ['Name' => $title, 'Url' =>  '/groups/all/'.$queryString]]);
+
+        }
+        $this->setData('Title', $title);
+        $this->setData('NoDataText',$noDataText);
 
         $this->View = 'list';
-
-        // Deliver JSON data if necessary
-        if ($this->_DeliveryType != DELIVERY_TYPE_ALL) {
-            $this->setJson('LessRow', $this->Pager->toString('less'));
-            $this->setJson('MoreRow', $this->Pager->toString('more'));
-            $this->View = 'groups';
-        }
 
         $this->render();
     }

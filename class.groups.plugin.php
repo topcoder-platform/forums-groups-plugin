@@ -15,8 +15,12 @@ if (!class_exists('Cocur\Slugify\Slugify')){
 
 class GroupsPlugin extends Gdn_Plugin {
     const GROUPS_ROUTE = '/groups';
+    const ROUTE_MY_GROUPS = '/groups/mine';
+    const ROUTE_CHALLENGE_GROUPS = '/groups?filter=challenge'; //'/groups/challenges';
+    const ROUTE_REGULAR_GROUPS = '/groups?filter=regular'; //'/groups/regulars';
     const GROUP_ROUTE = '/group/';
     const GROUPS_GROUP_ADD_PERMISSION = 'Groups.Group.Add';
+    const GROUPS_GROUP_ARCHIVE_PERMISSION = 'Groups.Group.Archive';
     const GROUPS_GROUP_EDIT_PERMISSION = 'Groups.Group.Edit';
     const GROUPS_GROUP_DELETE_PERMISSION = 'Groups.Group.Delete';
     const GROUPS_CATEGORY_MANAGE_PERMISSION = 'Groups.Category.Manage';
@@ -79,7 +83,8 @@ class GroupsPlugin extends Gdn_Plugin {
             self::GROUPS_MODERATION_MANAGE_PERMISSION => 1,
             self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1,
             self::GROUPS_GROUP_ADD_PERMISSION => 1,
-            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1
+            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1,
+            self::GROUPS_GROUP_ARCHIVE_PERMISSION => 1
         ], true);
 
         $permissionModel->save( [
@@ -88,7 +93,8 @@ class GroupsPlugin extends Gdn_Plugin {
             self::GROUPS_MODERATION_MANAGE_PERMISSION => 1,
             self::GROUPS_CATEGORY_MANAGE_PERMISSION => 1,
             self::GROUPS_GROUP_ADD_PERMISSION => 1,
-            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1
+            self::GROUPS_EMAIL_INVITATIONS_PERMISSION => 1,
+            self::GROUPS_GROUP_ARCHIVE_PERMISSION => 1
         ], true);
 
         $permissionModel->save( [
@@ -318,6 +324,7 @@ class GroupsPlugin extends Gdn_Plugin {
         }
     }
 
+    /*
     public function discussionsController_afterDiscussionFilters_handler($sender){
         $this->addGroupLinkToMenu();
     }
@@ -325,9 +332,9 @@ class GroupsPlugin extends Gdn_Plugin {
     public function discussionController_afterDiscussionFilters_handler($sender){
         $this->addGroupLinkToMenu();
     }
-
-    public function categoriesController_afterDiscussionFilters_handler($sender){
-        $this->addGroupLinkToMenu();
+    */
+    public function base_afterDiscussionFilters_handler($sender){
+        $this->addGroupLinkToMenu($sender);
     }
 
     public function base_categoryOptionsDropdown_handler($sender, $args) {
@@ -679,10 +686,21 @@ class GroupsPlugin extends Gdn_Plugin {
     /**
      * Display a groups link in the menu
      */
-    private function addGroupLinkToMenu() {
+    private function addGroupLinkToMenu($sender) {
         if(Gdn::session()->isValid()) {
-            echo '<li>'. anchor('Challenges', GroupsPlugin::GROUPS_ROUTE).'</li>';
+
+            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenges', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
+            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Groups', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
+           // echo '<li class="'.$this->getMenuItemCssClassFromRequestMethod($sender, 'mine').'">'. anchor('My Challenges & Groups', GroupsPlugin::ROUTE_MY_GROUPS).'</li>';
         }
+    }
+
+    private function getMenuItemCssClassFromRequestMethod($sender, $requestMethod){
+        return $sender->ControllerName == 'groupscontroller' && $sender->RequestMethod == $requestMethod ? ' Active' : '';
+    }
+
+    private function getMenuItemCssClassFromQuery($sender, $requestMethod){
+        return $sender->ControllerName == 'groupscontroller' && Gdn::request()->get('filter') == $requestMethod ? ' Active' : '';
     }
 
     public static function log($message, $data= []) {

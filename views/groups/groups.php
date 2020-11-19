@@ -5,6 +5,4 @@ if (!function_exists('writeGroup')) {
     include($this->fetchViewLocation('helper_functions', 'groups', 'vanilla'));
 }
 
-foreach ($this->GroupData->result() as $Group) {
-    writeGroup($Group, $this, $Session);
-}
+echo writeGroups($this->data('Groups'), $this);

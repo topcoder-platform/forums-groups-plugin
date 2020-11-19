@@ -3,18 +3,93 @@
  * Class GroupModel
  */
 class GroupModel extends Gdn_Model {
-    /** Slug for PUBLIC type. */
-    const TYPE_PUBLIC = 'public';
+    use StaticInitializer;
 
-    /** Slug for PRIVATE type. */
-    const TYPE_PRIVATE = 'private';
+    //
+    // Group Privacy
+    //
+    /** Slug for PUBLIC privacy. */
+    const PRIVACY_PUBLIC = 'public';
 
-    /** Slug for SECRET type. */
-    const TYPE_SECRET = 'secret';
+    /** Slug for PRIVATE privacy. */
+    const PRIVACY_PRIVATE = 'private';
 
+    /** Slug for SECRET privacy. */
+    const PRIVACY_SECRET = 'secret';
+
+    //
+    // Group Roles
+    //
     const ROLE_MEMBER = 'member';
-
     const ROLE_LEADER = 'leader';
+
+    //
+    // Group Types
+    //
+    const TYPE_CHALLENGE = 'challenge';
+    const TYPE_REGULAR = 'regular';
+
+    /** @var string The filter key for clearing-type filters. */
+    const EMPTY_FILTER_KEY = 'none';
+
+    /** @var string Default column to order by. */
+    const DEFAULT_SORT_KEY = 'new';
+
+    /**
+     * @var array The filters that are accessible via GET. Each filter corresponds with a where clause. You can have multiple
+     * filter sets. Every filter must be added to a filter set.
+     *
+     * Each filter set has the following properties:
+     * - **key**: string - The key name of the filter set. Appears in the query string, should be url-friendly.
+     * - **name**: string - The display name of the filter set. Usually appears in the UI.
+     * - **filters**: array - The filters in the set.
+     *
+     * Each filter in the array has the following properties:
+     * - **key**: string - The key name of the filter. Appears in the query string, should be url-friendly.
+     * - **setKey**: string - The key name of the filter set.
+     * - **name**: string - The display name of the filter. Usually appears as an option in the UI.
+     * - **where**: string - The where array query to execute for the filter. Uses
+     */
+    // [$setKey]['filters'][$key] = ['key' => $key, 'setKey' => $setKey, 'name' => $name, 'wheres' => $wheres];
+    protected static $allowedFilters = [
+      'filter' =>  [ 'key' => 'filter', 'name' => 'All',
+          'filters' => [
+                    'challenge' => ['key' => 'challenge', 'name' => 'Challenges', 'where' => ['g.Type' => self::TYPE_CHALLENGE]],
+                    'regular' =>['key' => 'regular', 'name' => 'Groups', 'where' => ['g.Type' => self::TYPE_REGULAR]]
+                    ]
+
+        ],
+    ];
+
+    /**
+     * @var array The sorts that are accessible via GET. Each sort corresponds with an order by clause.
+     *
+     * Each sort in the array has the following properties:
+     * - **key**: string - The key name of the sort. Appears in the query string, should be url-friendly.
+     * - **name**: string - The display name of the sort.
+     * - **orderBy**: string - An array indicating order by fields and their directions in the format:
+     *   `['field1' => 'direction', 'field2' => 'direction']`
+     */
+    protected static $allowedSorts = [
+        'new' => ['key' => 'new', 'name' => 'New', 'orderBy' => ['g.DateInserted' => 'desc']],
+        'old' => ['key' => 'new', 'name' => 'Old', 'orderBy' => ['g.DateInserted' => 'asc']]
+    ];
+
+    /**
+     * @var array The filter keys of the wheres we apply in the query.
+     */
+    protected $filters = [
+    ];
+
+    /**
+     * @var string The sort key of the order by we apply in the query.
+     */
+    protected $sort = '';
+
+    /**
+     * @var GroupModel $instance;
+     */
+    private static $instance;
 
     private $currentUserTopcoderProjectRoles = [];
 
@@ -24,6 +99,388 @@ class GroupModel extends Gdn_Model {
     public function __construct() {
         parent::__construct('Group');
         $this->fireEvent('Init');
+    }
+
+    /**
+     * The shared instance of this object.
+     *
+     * @return GroupModel Returns the instance.
+     */
+    public static function instance() {
+        if (self::$instance === null) {
+            self::$instance = new GroupModel();
+        }
+        return self::$instance;
+    }
+
+    /**
+     * @return array The current sort array.
+     */
+    public static function getAllowedSorts() {
+        self::initStatic();
+        return self::$allowedSorts;
+    }
+
+    /**
+     * Get the registered filters.
+     *
+     * This method must never be called before plugins initialisation.
+     *
+     * @return array The current filter array.
+     */
+    public static function getAllowedFilters() {
+        self::initStatic();
+        return self::$allowedFilters;
+    }
+
+    /**
+     * @return array
+     */
+    public function getFilters() {
+        return $this->filters;
+    }
+
+    /**
+     * @return string
+     */
+    public function getSort() {
+        return $this->sort;
+    }
+
+    /**
+     * Set the discussion sort.
+     *
+     * This setter also accepts an array and checks if the sort key exists on the array. Will only set the sort property
+     * if it exists in the allowed sorts array.
+     *
+     * @param string|array $sort The prospective sort to set.
+     */
+    public function setSort($sort) {
+        if (is_array($sort)) {
+            $safeSort = $this->getSortFromArray($sort);
+            $this->sort = $safeSort;
+        } elseif (is_string($sort)) {
+            $safeSort = $this->getSortFromString($sort);
+            $this->sort = $safeSort;
+        }
+    }
+
+    /**
+     * Will only set the filters property if the passed filters exist in the allowed filters array.
+     *
+     * @param array $filters The prospective filters to set.
+     */
+    public function setFilters($filters) {
+        if (is_array($filters)) {
+            $safeFilters = $this->getFiltersFromArray($filters);
+            $this->filters = $safeFilters;
+        } elseif (is_string($filters)) {
+            $safeFilters = $this->getFiltersFromArray([$filters]);
+            $this->filters = $safeFilters;
+        }
+    }
+
+    /**
+     * @return string
+     */
+    public static function getDefaultSort() {
+        // Try to find a matching sort.
+        foreach (self::getAllowedSorts() as $sort) {
+            if (val('key', $sort, []) == self::DEFAULT_SORT_KEY) {
+                return $sort;
+            }
+        }
+
+        Logger::log(
+            Logger::DEBUG,
+            'Sort: default Sort Key does not exist in the GroupModel\'s allowed sorts array.',
+            ['sortKey' => self::DEFAULT_SORT_KEY]
+        );
+
+        return [];
+    }
+
+    /**
+     * Retrieves valid set key and filter keys pairs from an array, and returns the setKey => filterKey values.
+     *
+     * Works real well with unfiltered request arguments. (i.e., Gdn::request()->get()) Will only return safe
+     * set key and filter key pairs from the filters array or an empty array if not found.
+     *
+     * @param array $array The array to get the filters from.
+     * @return array The valid filters from the passed array or an empty array.
+     */
+    protected function getFiltersFromArray($array) {
+        GroupsPlugin::log('getFiltersFromArray', ['param' => $array]);
+        $filterKeys = [];
+        foreach (self::getAllowedFilters() as $filterSet) {
+            $filterSetKey = val('key', $filterSet);
+            //GroupsPlugin::log('Trying to get "key" from filterSet', ['$filterSet'=> $filterSet, '$filterSetKey' => $filterSetKey = val('key', $filterSet)]);
+            // Check if any of our filters are in the array. Filter key value is unsafe.
+            if ($filterKey = val($filterSetKey, $array)) {
+                GroupsPlugin::log('Using "filterSetKey" ', ['$filterSetKey'=> $filterSetKey]);
+                GroupsPlugin::log('Using "filterKey is" ', ['$filterKey'=> $filterKey]);
+                GroupsPlugin::log('Using array ...', ['array'=>  val('filters', $filterSet)]);
+                // Check that value is in filter array to ensure safety.
+                if (val($filterKey, val('filters', $filterSet))) {
+                    GroupsPlugin::log('$filterKey='.$filterKey, []);
+                    // Value is safe.
+                    $filterKeys[$filterSetKey] = $filterKey;
+                } else {
+                    Logger::log(
+                        Logger::NOTICE,
+                        'Filter: {filterSetKey} => {$filterKey} does not exist in the GroupModel\'s allowed filters array.',
+                        ['filterSetKey' => $filterSetKey, 'filterKey' => $filterKey]
+                    );
+                }
+            }
+        }
+        return $filterKeys;
+    }
+
+    /**
+     * Retrieves the sort key from an array and if the value is valid, returns it.
+     *
+     * Works real well with unfiltered request arguments. (i.e., Gdn::request()->get()) Will only return a safe sort key
+     * from the sort array or an empty string if not found.
+     *
+     * @param array $array The array to get the sort from.
+     * @return string The valid sort from the passed array or an empty string.
+     */
+    protected function getSortFromArray($array) {
+        $unsafeSortKey = val('sort', $array);
+        foreach (self::getAllowedSorts() as $sort) {
+            if ($unsafeSortKey == val('key', $sort)) {
+                // Sort key is valid.
+                return val('key', $sort);
+            }
+        }
+        if ($unsafeSortKey) {
+            Logger::log(
+                Logger::NOTICE,
+                'Sort: {unsafeSortKey} does not exist in the DiscussionModel\'s allowed sorts array.',
+                ['unsafeSortKey' => $unsafeSortKey]
+            );
+        }
+        return '';
+    }
+
+    /**
+     * Checks the allowed sorts array for the string and it is valid, returns it the string.
+     *
+     * If not, returns an empty string. Will only return a safe sort key from the sort array or an empty string if not
+     * found.
+     *
+     * @param string $string The string to get the sort from.
+     * @return string A valid sort key or an empty string.
+     */
+    protected function getSortFromString($string) {
+        if (val($string, self::$allowedSorts)) {
+            // Sort key is valid.
+            return $string;
+        } else {
+            Logger::log(
+                Logger::DEBUG,
+                'Sort "{sort}" does not exist in the GroupModel\'s allowed sorts array.',
+                ['sort' => $string]
+            );
+            return '';
+        }
+    }
+
+    /**
+     * Takes a collection of filters and returns the corresponding filter key/value array [setKey => filterKey].
+     *
+     * @param array $filters The filters to get the keys for.
+     * @return array The filter key array.
+     */
+    protected function getKeysFromFilters($filters) {
+        $filterKeyValues = [];
+        foreach ($filters as $filter) {
+            if (isset($filter['setKey']) && isset($filter['key'])) {
+                $filterKeyValues[val('setKey', $filter)] = val('key', $filter);
+            }
+        }
+        return $filterKeyValues;
+    }
+
+
+    /**
+     * Takes an array of filter key/values [setKey => filterKey] and returns a collection of filters.
+     *
+     * @param array $filterKeyValues The filters key array to get the filter for.
+     * @return array An array of filters.
+     */
+    public function getFiltersFromKeys($filterKeyValues) {
+        $filters = [];
+        $allFilters = self::getAllowedFilters();
+        foreach ($filterKeyValues as $key => $value) {
+            if (isset($allFilters[$key]['filters'][$value])) {
+                $filters[] = $allFilters[$key]['filters'][$value];
+            }
+        }
+        return $filters;
+    }
+
+    /**
+     * @param string $sortKey
+     * @return array
+     */
+    public function getSortFromKey($sortKey) {
+        return val($sortKey, self::getAllowedSorts(), []);
+    }
+
+    /**
+     * Get the current sort/filter query string.
+     *
+     * You can pass no parameters or pass either a new filter key or sort key to build a new query string, leaving the
+     * other properties intact.
+     *
+     * @param string $selectedSort
+     * @param array $selectedFilters
+     * @param string $sortKeyToSet The key name of the sort in the sorts array.
+     * @param array $filterKeysToSet An array of filters, where the key is the key of the filterSet in the filters array
+     * and the value is the key of the filter.
+     * @return string The current or amended query string for sort and filter.
+     */
+    public static function getSortFilterQueryString($selectedSort, $selectedFilters, $sortKeyToSet = '', $filterKeysToSet = []) {
+        $filterString = '';
+        $filterKeys = array_merge($selectedFilters, $filterKeysToSet);
+
+        // Build the sort query string
+        foreach ($filterKeys as $setKey => $filterKey) {
+            // If the preference is none, don't show it.
+            if ($filterKey != self::EMPTY_FILTER_KEY) {
+                if (!empty($filterString)) {
+                    $filterString .= '&';
+                }
+                $filterString .= $setKey.'='.$filterKey;
+            }
+        }
+
+        $sortString = '';
+        if (!$sortKeyToSet) {
+            $sort = $selectedSort;
+            if ($sort) {
+                $sortString = 'sort='.$sort;
+            }
+        } else {
+            $sortString = 'sort='.$sortKeyToSet;
+        }
+
+        $queryString = '';
+        if (!empty($sortString) && !empty($filterString)) {
+            $queryString = '?'.$sortString.'&'.$filterString;
+        } elseif (!empty($sortString)) {
+            $queryString = '?'.$sortString;
+        } elseif (!empty($filterString)) {
+            $queryString = '?'.$filterString;
+        }
+
+        return $queryString;
+    }
+
+    /**
+     * Add a sort to the allowed sorts array.
+     *
+     * @param string $key The key name of the sort. Appears in the query string, should be url-friendly.
+     * @param string $name The display name of the sort.
+     * @param string|array $orderBy An array indicating order by fields and their directions in the format:
+     *      array('field1' => 'direction', 'field2' => 'direction')
+     */
+    public static function addSort($key, $name, $orderBy) {
+        self::$allowedSorts[$key] = ['key' => $key, 'name' => $name, 'orderBy' => $orderBy];
+    }
+
+    /**
+     * Add a filter to the allowed filters array.
+     *
+     * @param string $key The key name of the filter. Appears in the query string, should be url-friendly.
+     * @param string $name The display name of the filter. Usually appears as an option in the UI.
+     * @param array $wheres The where array query to execute for the filter. Uses
+     * @param string $setKey The key name of the filter set.
+     */
+    public static function addFilter($key, $name, $wheres, $setKey = 'filter') {
+        if (!val($setKey, self::getAllowedFilters())) {
+            self::addFilterSet($setKey);
+        }
+        self::$allowedFilters[$setKey]['filters'][$key] = ['key' => $key, 'setKey' => $setKey, 'name' => $name, 'wheres' => $wheres];
+    }
+
+    /**
+     * Adds a filter set to the allowed filters array.
+     *
+     * @param string $setKey The key name of the filter set.
+     * @param string $setName The name of the filter set. Appears in the UI.
+     * @param array $categoryIDs The IDs of the categories that this filter will work on. If empty, filter is global.
+     */
+    public static function addFilterSet($setKey, $setName = '', $categoryIDs = []) {
+        if (!$setName) {
+            $setName = t('All Groups');
+        }
+        self::$allowedFilters[$setKey]['key'] = $setKey;
+        self::$allowedFilters[$setKey]['name'] = $setName;
+       // self::$allowedFilters[$setKey]['categories'] = $categoryIDs;
+
+        // Add a way to let users clear any filters they've added.
+        self::addClearFilter($setKey, $setName);
+    }
+
+    /**
+     * Removes a filter set from the allowed filter array with the passed set key.
+     *
+     * @param string $setKey The key of the filter to remove.
+     */
+    public static function removeFilterSet($setKey) {
+        if (val($setKey, self::$allowedFilters)) {
+            unset(self::$allowedFilters[$setKey]);
+        }
+    }
+
+
+    /**
+     * Removes a filters from the allowed filter array with the passed filter key/values.
+     *
+     * @param array $filterKeys The key/value pairs of the filters to remove.
+     */
+    public static function removeFilter($filterKeys) {
+        foreach ($filterKeys as $setKey => $filterKey) {
+            if (isset(self::$allowedFilters[$setKey]['filters'][$filterKey])) {
+                unset(self::$allowedFilters[$setKey]['filters'][$filterKey]);
+            }
+        }
+    }
+
+    /**
+     * Adds an option to a filter set filters array to clear any existing filters on the data.
+     *
+     * @param string $setKey The key name of the filter set to add the option to.
+     * @param string $setName The display name of the option. Usually the human-readable set name.
+     */
+    protected static function addClearFilter($setKey, $setName = '') {
+        self::$allowedFilters[$setKey]['filters'][self::EMPTY_FILTER_KEY] = [
+            'key' => self::EMPTY_FILTER_KEY,
+            'setKey' => $setKey,
+            'name' => $setName,
+            'wheres' => []
+        ];
+    }
+
+    /**
+     * If you don't want to use any of the default sorts, use this little buddy.
+     */
+    public static function clearSorts() {
+        self::$allowedSorts = [];
+    }
+
+    /**
+     * Removes a sort from the allowed sort array with the passed key.
+     *
+     * @param string $key The key of the sort to remove.
+     */
+    public static function removeSort($key) {
+        if (val($key, self::$allowedSorts)) {
+            unset(self::$allowedSorts[$key]);
+        }
     }
 
     public function setCurrentUserTopcoderProjectRoles($topcoderProjectRoles = []){
@@ -76,7 +533,7 @@ class GroupModel extends Gdn_Model {
         // Build up the base query. Self-join for optimization.
         $sql->select('g.GroupID')
             ->from('Group g')
-            ->where('g.Type' , [GroupModel::TYPE_PUBLIC] );
+            ->where('g.Privacy' , [GroupModel::PRIVACY_PUBLIC] );
 
         $data = $sql->get()->resultArray();
         return array_column($data, 'GroupID');
@@ -179,7 +636,7 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     * Get all available groups including private ines
+     * Get all available groups including private ones
      */
     public function getAvailableGroups($where =[], $orderFields = '', $limit = false, $offset = false) {
 
@@ -199,9 +656,9 @@ class GroupModel extends Gdn_Model {
 
         $sql = $this->SQL;
 
-        $groupTypes = [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE];
+        $groupTypes = [GroupModel::PRIVACY_PUBLIC, GroupModel::PRIVACY_PRIVATE];
         if(Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            array_push($groupTypes,GroupModel::TYPE_SECRET);
+            array_push($groupTypes,GroupModel::PRIVACY_SECRET);
         }
 
         // Build up the base query. Self-join for optimization.
@@ -209,12 +666,13 @@ class GroupModel extends Gdn_Model {
             ->from('Group g')
             ->leftjoin('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
             ->where('ug.UserID' , null)
-            ->where('g.Type' , $groupTypes )
+            ->where('g.Privacy' , $groupTypes )
+            ->where('g.Archived' , 0 )
             ->where($where)
             ->limit($limit, $offset);
 
         foreach ($orderFields as $field => $direction) {
-            $sql->orderBy($this->addFieldPrefix($field), $direction);
+            $sql->orderBy($field, $direction);
         }
 
         $data = $sql->get();
@@ -232,22 +690,23 @@ class GroupModel extends Gdn_Model {
 
         $sql = $this->SQL;
 
-        $groupTypes = [GroupModel::TYPE_PUBLIC, GroupModel::TYPE_PRIVATE];
+        $groupTypes = [GroupModel::PRIVACY_PUBLIC, GroupModel::PRIVACY_PRIVATE];
         if(Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            array_push($groupTypes,GroupModel::TYPE_SECRET);
+            array_push($groupTypes,GroupModel::PRIVACY_SECRET);
         }
 
         // Build up the base query. Self-join for optimization.
-        $sql->select('g.*')
+        $sql->select('count(*) Count')
             ->from('Group g')
             ->leftjoin('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
             ->where('ug.UserID' , null)
-            ->where('g.Type' , $groupTypes)
+            ->where('g.Privacy' , $groupTypes)
+            ->where('g.Archived' , 0 )
             ->where($where);
 
         $data = $sql->get()
             ->firstRow();
-
+        GroupsPlugin::log('countAvailableGroups', ['data' => $data]);
         return $data === false ? 0 : $data->Count;
     }
 
@@ -276,13 +735,16 @@ class GroupModel extends Gdn_Model {
         $sql->select('g.*, ug.Role, ug.DateInserted')
             ->from('Group g')
             ->join('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
-            ->limit($limit, $offset);
+            ->where('g.Archived' , 0 )
+            ->where($where);
+
 
         foreach ($orderFields as $field => $direction) {
-            $sql->orderBy($this->addFieldPrefix($field), $direction);
+            $sql->orderBy($field, $direction);
         }
 
-        $sql->where($where);
+        $sql->limit($limit, $offset);
+
 
         $data = $sql->get();
         return $data;
@@ -303,7 +765,9 @@ class GroupModel extends Gdn_Model {
         $sql->select('count(*) Count')
             ->from('Group g')
             ->join('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
+            ->where('g.Archived' , 0 )
             ->where($where);
+
 
         $data = $sql->get()
             ->firstRow();
@@ -614,7 +1078,7 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canView($group) {
-        if($group->Type == GroupModel::TYPE_PUBLIC){
+        if($group->Privacy == GroupModel::PRIVACY_PUBLIC){
             return true;
         } else {
             $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
@@ -864,7 +1328,7 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canJoin($group) {
-        return $group->Type == GroupModel::TYPE_PUBLIC;
+        return $group->Privacy == GroupModel::PRIVACY_PUBLIC;
     }
 
     /**
@@ -1236,5 +1700,41 @@ class GroupModel extends Gdn_Model {
             ]
         ];
         $activityModel->save($data);
+    }
+
+
+    public function canArchiveGroup($group){
+        return Gdn::session()->UserID == $group->OwnerID ||  Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_ARCHIVE_PERMISSION);
+    }
+
+    /**
+     * Archive a group and its categories
+     *
+     * @param $group
+     */
+    public function archiveGroup($group){
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+
+       if($group->ChallengeID) {
+            $categoryModel = new CategoryModel();
+            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
+            if($groupCategory->DisplayAs !== 'Discussions') {
+                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, true);
+                $categoryIDs = array_column($categories, 'CategoryID');
+            } else {
+                $categoryIDs = [$groupCategory->CategoryID];
+            }
+
+            foreach($categoryIDs as $categoryID) {
+                $category = $categoryModel->getID($categoryID, DATASET_TYPE_ARRAY);
+                $category['Archived'] = 1;
+                $categoryModel->save($category);
+            }
+        }
+
+        $group->Archived = 1;
+        $this->save($group);
     }
 }
