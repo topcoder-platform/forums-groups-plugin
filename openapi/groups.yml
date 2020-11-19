@@ -149,7 +149,7 @@ paths:
         required: true
       summary: Add member to a group.
   '/groups/{id}/archive':
-    post:
+    put:
       parameters:
         - description: The group ID.
           in: path
@@ -164,7 +164,7 @@ paths:
         - Groups
       requestBody:
         required: false
-      summary: Archive to a group.
+      summary: Archive a group.
 components:
   requestBodies:
     GroupPost:

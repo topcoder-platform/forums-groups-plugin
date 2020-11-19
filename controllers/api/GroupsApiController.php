@@ -207,7 +207,7 @@ class GroupsApiController extends AbstractApiController {
      * @throws ServerException If the group could not be archived.
      * @return
      */
-    public function post_archive($id, array $body) {
+    public function put_archive($id, array $body) {
         $this->idParamSchema();
 
         $group = $this->groupModel->getByGroupID($id);
