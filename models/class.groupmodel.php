@@ -510,6 +510,15 @@ class GroupModel extends Gdn_Model {
         return c('Vanilla.Groups.PerPage', 30);
     }
 
+    public function findGroupIDFromDiscussion($discussion){
+        if(is_numeric($discussion)){
+            $discussionModel = new DiscussionModel();
+            $discussion = $discussionModel->getID($discussion);
+        }
+        $categoryID = val('CategoryID', $discussion);
+        $category = CategoryModel::categories($categoryID);
+        return val('GroupID', $category, false);
+    }
 
     /**
      * Default Gdn_Model::get() behavior.
@@ -1438,7 +1447,7 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canViewDiscussion($discussion) {
-        $groupID= $discussion->GroupID;
+        $groupID = $this->findGroupIDFromDiscussion($discussion);
         if(!$groupID) {
             return true;
         }
@@ -1456,7 +1465,7 @@ class GroupModel extends Gdn_Model {
      */
     public function canEditDiscussion($discussion) {
         $canEditDiscussion = DiscussionModel::canEdit($discussion) ;
-        $groupID= $discussion->GroupID;
+        $groupID= $this->findGroupIDFromDiscussion($discussion);
         if(!$groupID) {
             return $canEditDiscussion;
         }
@@ -1480,7 +1489,7 @@ class GroupModel extends Gdn_Model {
         && !$discussion->Dismissed
         && Gdn::session()->isValid();
 
-        $groupID= $discussion->GroupID;
+        $groupID= $this->findGroupIDFromDiscussion($discussion);
         if(!$groupID ) {
             return $canDismissDiscussion;
         }
@@ -1506,7 +1515,8 @@ class GroupModel extends Gdn_Model {
      */
     public function canAnnounceDiscussion($discussion) {
         $canAnnounceDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Announce', true);
-        $groupID = $discussion->GroupID;
+        $groupID = $this->findGroupIDFromDiscussion($discussion);
+
         if(!$groupID ) {
             return $canAnnounceDiscussion;
         }
@@ -1557,7 +1567,7 @@ class GroupModel extends Gdn_Model {
      */
     public function canSinkDiscussion($discussion) {
         $canSinkDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Sink', true);
-        $groupID = $discussion->GroupID;
+        $groupID = $this->findGroupIDFromDiscussion($discussion);
         if(!$groupID ) {
             return $canSinkDiscussion;
         }
@@ -1584,7 +1594,7 @@ class GroupModel extends Gdn_Model {
      */
     public function canCloseDiscussion($discussion) {
         $canCloseDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Close', true);
-        $groupID = $discussion->GroupID;
+        $groupID = $this->findGroupIDFromDiscussion($discussion);
         if(!$groupID ) {
             return $canCloseDiscussion;
         }
@@ -1621,7 +1631,7 @@ class GroupModel extends Gdn_Model {
 
     public function canDeleteDiscussion($discussion) {
         $canDeleteDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Delete', true);
-        $groupID= $discussion->GroupID;
+        $groupID = $this->findGroupIDFromDiscussion($discussion);
         if(!$groupID) {
              return $canDeleteDiscussion;
         }

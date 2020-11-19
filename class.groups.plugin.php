@@ -171,11 +171,15 @@ class GroupsPlugin extends Gdn_Plugin {
     public function discussionsController_beforeDiscussionMetaData_handler($sender, $args){
         if($args['Discussion']) {
             $discussion = $args['Discussion'];
-            if ($discussion->GroupID) {
-                $result = '/group/' . $discussion->GroupID;
+            $groupModel = new GroupModel();
+            $groupID = $groupModel->findGroupIDFromDiscussion($discussion);
+            GroupsPlugin::log('discussionsController_beforeDiscussionMetaData_handler', [
+                'GroupID' => $groupID]);
+            if ($groupID) {
+                $result = '/group/' . $groupID;
                 $url = url($result, true);
-                $groupModel = new GroupModel();
-                $group = $groupModel->getByGroupID($discussion->GroupID);
+
+                $group = $groupModel->getByGroupID($groupID);
                 echo '<div class="Meta Meta-Discussion Group-Info">'.
                         '<span class="MItem ">'.
                             '<span class="label">Challenge: </span>'.
@@ -240,11 +244,13 @@ class GroupsPlugin extends Gdn_Plugin {
 
     public function discussionController_render_before($sender, $args) {
         $Discussion = $sender->data('Discussion');
-        if($Discussion && $Discussion->GroupID != null) {
+        if($Discussion) {
             $groupModel = new GroupModel();
             $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
             $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
-            $Group = $groupModel->getByGroupID($Discussion->GroupID);
+            $groupID = $groupModel->findGroupIDFromDiscussion($Discussion);
+            self::log('discussionController_render_before:GroupID='.$groupID, []);
+            $Group = $groupModel->getByGroupID($groupID);
             if (!$groupModel->canView($Group)) {
                 throw permissionException();
             }
@@ -324,15 +330,6 @@ class GroupsPlugin extends Gdn_Plugin {
         }
     }
 
-    /*
-    public function discussionsController_afterDiscussionFilters_handler($sender){
-        $this->addGroupLinkToMenu();
-    }
-
-    public function discussionController_afterDiscussionFilters_handler($sender){
-        $this->addGroupLinkToMenu();
-    }
-    */
     public function base_afterDiscussionFilters_handler($sender){
         $this->addGroupLinkToMenu($sender);
     }
@@ -362,9 +359,9 @@ class GroupsPlugin extends Gdn_Plugin {
      */
     public function discussionController_discussionInfo_handler($sender, $args) {
         if($sender->Data['Discussion']) {
-            $groupID = $sender->Data['Discussion']->GroupID;
+            $groupModel = new GroupModel();
+            $groupID = $groupModel->findGroupIDFromDiscussion($sender->Data['Discussion']);
             if($groupID) {
-                $groupModel = new GroupModel();
                 $group = $groupModel->getByGroupID($groupID);
                 if($group->ChallengeUrl) {
                     echo anchor($group->Name, $group->ChallengeUrl);
@@ -381,10 +378,12 @@ class GroupsPlugin extends Gdn_Plugin {
             return;
         }
         $discussion= $args['Discussion'];
+        $groupModel = new GroupModel();
+        $groupID = $groupModel->findGroupIDFromDiscussion($discussion);
         if ($sender->deliveryType() == DELIVERY_TYPE_ALL) {
-            redirectTo(GroupsPlugin::GROUP_ROUTE.$discussion->GroupID);
+            redirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
         } else {
-            $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$discussion->GroupID);
+            $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
         }
     }
 
