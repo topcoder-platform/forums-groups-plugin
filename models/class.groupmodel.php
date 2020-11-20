@@ -210,19 +210,13 @@ class GroupModel extends Gdn_Model {
      * @return array The valid filters from the passed array or an empty array.
      */
     protected function getFiltersFromArray($array) {
-        GroupsPlugin::log('getFiltersFromArray', ['param' => $array]);
         $filterKeys = [];
         foreach (self::getAllowedFilters() as $filterSet) {
             $filterSetKey = val('key', $filterSet);
-            //GroupsPlugin::log('Trying to get "key" from filterSet', ['$filterSet'=> $filterSet, '$filterSetKey' => $filterSetKey = val('key', $filterSet)]);
             // Check if any of our filters are in the array. Filter key value is unsafe.
             if ($filterKey = val($filterSetKey, $array)) {
-                GroupsPlugin::log('Using "filterSetKey" ', ['$filterSetKey'=> $filterSetKey]);
-                GroupsPlugin::log('Using "filterKey is" ', ['$filterKey'=> $filterKey]);
-                GroupsPlugin::log('Using array ...', ['array'=>  val('filters', $filterSet)]);
                 // Check that value is in filter array to ensure safety.
                 if (val($filterKey, val('filters', $filterSet))) {
-                    GroupsPlugin::log('$filterKey='.$filterKey, []);
                     // Value is safe.
                     $filterKeys[$filterSetKey] = $filterKey;
                 } else {
@@ -510,6 +504,11 @@ class GroupModel extends Gdn_Model {
         return c('Vanilla.Groups.PerPage', 30);
     }
 
+    /**
+     * Get group ID from a discussion
+     * @param $discussion
+     * @return false|mixed
+     */
     public function findGroupIDFromDiscussion($discussion){
         if(is_numeric($discussion)){
             $discussionModel = new DiscussionModel();
@@ -518,6 +517,19 @@ class GroupModel extends Gdn_Model {
         $categoryID = val('CategoryID', $discussion);
         $category = CategoryModel::categories($categoryID);
         return val('GroupID', $category, false);
+    }
+
+    /**
+     * Get all group categories by GroupID
+     *
+     * @param $groupID
+     * @return array|false|null
+     */
+    public function getAllGroupCategoryIDs($groupID) {
+        $categoryModel = new CategoryModel();
+        $categories = $categoryModel->getWhere(['GroupID' => $groupID])->resultArray();
+        $categoryIDs = array_column($categories,'CategoryID');
+        return $categoryIDs;
     }
 
     /**
@@ -1087,7 +1099,7 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canView($group) {
-        if($group->Privacy == GroupModel::PRIVACY_PUBLIC){
+        if($group->Privacy == self::PRIVACY_PUBLIC){
             return true;
         } else {
             $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
@@ -1302,7 +1314,7 @@ class GroupModel extends Gdn_Model {
     }
 
     private function checkTopcoderProjectRole($topcoderProjectRole){
-        return in_array($topcoderProjectRole, $this->currentUserTopcoderProjectRoles);
+        return $this->currentUserTopcoderProjectRoles? in_array($topcoderProjectRole, $this->currentUserTopcoderProjectRoles): false;
     }
 
     /**

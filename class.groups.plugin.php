@@ -276,8 +276,10 @@ class GroupsPlugin extends Gdn_Plugin {
      */
     public function base_discussionOptionsDropdown_handler($sender, $args){
         $Discussion = $args['Discussion'];
-        $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
         if($Discussion) {
+            // The list of Topcoder Project Roles are added to a sender by Topcoder plugin before each request
+            // for DiscussionController/GroupController
+            $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
             $groupModel = new GroupModel();
             $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
             $canView = $groupModel->canView($Discussion);
