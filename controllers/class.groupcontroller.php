@@ -25,18 +25,6 @@ class GroupController extends VanillaController {
     /** @var bool Whether or not to show the category dropdown. */
     public $ShowCategorySelector = true;
 
-    const UI = [
-        'challenge' => ['BreadcrumbLevel1Title' => 'Challenges',
-            'BreadcrumbLevel1Url' =>  GroupsPlugin::ROUTE_CHALLENGE_GROUPS,
-            'CreateGroupTitle' => 'Create Challenge',
-            'EditGroupTitle' => 'Edit Challenge',
-            'TypeName' => 'challenge'],
-        'regular' =>   ['BreadcrumbLevel1Title' => 'Groups',
-            'BreadcrumbLevel1Url' =>  GroupsPlugin::ROUTE_REGULAR_GROUPS,
-            'CreateGroupTitle' => 'Create Group',
-            'EditGroupTitle' => 'Edit Group',
-            'TypeName' => 'group'],
-    ];
 
     public function __construct(CategoryModel $CategoryModel) {
         parent::__construct();
@@ -68,8 +56,8 @@ class GroupController extends VanillaController {
     }
 
     private function buildBreadcrumb($Group){
-        $level1 = self::UI[$Group->Type]['BreadcrumbLevel1Title'];
-        $level1Url = self::UI[$Group->Type]['BreadcrumbLevel1Url'];
+        $level1 = GroupsPlugin::UI[$Group->Type]['BreadcrumbLevel1Title'];
+        $level1Url = GroupsPlugin::UI[$Group->Type]['BreadcrumbLevel1Url'];
         return [['Name' => $level1, 'Url' => $level1Url],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID]];
     }
@@ -122,10 +110,10 @@ class GroupController extends VanillaController {
         if(!$this->GroupModel->canAddGroup()) {
             throw permissionException();
         }
-        if($type && array_key_exists($type, self::UI)) {
-            $this->title(self::UI[$type]['CreateGroupTitle']);
-            $level1Title = self::UI[$type]['BreadcrumbLevel1Title'];
-            $level1Url = self::UI[$type]['BreadcrumbLevel1Url'];
+        if($type && array_key_exists($type, GroupsPlugin::UI)) {
+            $this->title(GroupsPlugin::UI[$type]['CreateGroupTitle']);
+            $level1Title = GroupsPlugin::UI[$type]['BreadcrumbLevel1Title'];
+            $level1Url = GroupsPlugin::UI[$type]['BreadcrumbLevel1Url'];
             $this->setData('Breadcrumbs', [['Name' => $level1Title, 'Url' => $level1Url]]);
         }
 
@@ -147,7 +135,7 @@ class GroupController extends VanillaController {
             throw permissionException();
         }
 
-        $this->title(self::UI[$Group->Type]['DeleteGroupTitle']);
+        $this->title(GroupsPlugin::UI[$Group->Type]['DeleteGroupTitle']);
         $this->setData('Group', $Group);
        // Make sure the form knows which item we are deleting.
         $this->Form->addHidden('GroupID', $Group->GroupID);
@@ -173,7 +161,7 @@ class GroupController extends VanillaController {
             if(!$this->GroupModel->canEdit($Group)) {
                 throw permissionException();
             }
-            $this->title(self::UI[$Group->Type]['EditGroupTitle']);
+            $this->title(GroupsPlugin::UI[$Group->Type]['EditGroupTitle']);
             $this->setData('Breadcrumbs', $this->buildBreadcrumb($Group));
 
         } else {
@@ -185,7 +173,7 @@ class GroupController extends VanillaController {
         $typesData = [GroupModel::TYPE_REGULAR => GroupModel::TYPE_REGULAR, GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
         $this->setData('Types', $typesData);
 
-        $type = self::UI[$Group->Type]['TypeName'];
+        $type = GroupsPlugin::UI[$Group->Type]['TypeName'];
         $privacyTypes = [GroupModel::PRIVACY_PUBLIC => sprintf('Public. Anyone can see the %s and its content. Anyone can join.', $type),
             GroupModel::PRIVACY_PRIVATE => sprintf('Private. Anyone can see the %s, but only members can see its content. People must apply or be invited to join.', $type),
             GroupModel::PRIVACY_SECRET => sprintf('Secret. Only members can see the %s and view its content. People must be invited to join.', $type)];

@@ -33,6 +33,19 @@ class GroupsPlugin extends Gdn_Plugin {
     const ROLE_TOPCODER_COPILOT = 'Connect Copilot';
     const ROLE_TOPCODER_MANAGER = 'Connect Manager';
 
+    const UI = [
+        'challenge' => ['BreadcrumbLevel1Title' => 'Challenges',
+            'BreadcrumbLevel1Url' =>  self::ROUTE_CHALLENGE_GROUPS,
+            'CreateGroupTitle' => 'Create Challenge',
+            'EditGroupTitle' => 'Edit Challenge',
+            'TypeName' => 'challenge'],
+        'regular' =>   ['BreadcrumbLevel1Title' => 'Groups',
+            'BreadcrumbLevel1Url' =>  self::ROUTE_REGULAR_GROUPS,
+            'CreateGroupTitle' => 'Create Group',
+            'EditGroupTitle' => 'Edit Group',
+            'TypeName' => 'group'],
+    ];
+
     private $groupModel;
 
     /**
@@ -176,13 +189,14 @@ class GroupsPlugin extends Gdn_Plugin {
             GroupsPlugin::log('discussionsController_beforeDiscussionMetaData_handler', [
                 'GroupID' => $groupID]);
             if ($groupID) {
-                $result = '/group/' . $groupID;
+                $result = self::GROUP_ROUTE . $groupID;
                 $url = url($result, true);
 
                 $group = $groupModel->getByGroupID($groupID);
+                $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
                 echo '<div class="Meta Meta-Discussion Group-Info">'.
                         '<span class="MItem ">'.
-                            '<span class="label">Challenge: </span>'.
+                            '<span class="label">'.$type.':&nbsp;</span>'.
                             '<span class="value">'.anchor($group->Name, $url).'</span>'.
                         '</span>'.
                     '</div>';
@@ -386,6 +400,21 @@ class GroupsPlugin extends Gdn_Plugin {
             redirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
         } else {
             $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
+        }
+    }
+
+    /**
+     * Add a challenge name and link for each category on /categories page
+     * @param $sender
+     * @param $args
+     */
+    public function categoriesController_afterChallenge_handler($sender, $args) {
+        $category = $args['Category'];
+        $groupID = val('GroupID', $category);
+        if($groupID) {
+           $group = $this->groupModel->getByGroupID($groupID);
+           $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
+           echo '<span>'.$type.':</span>&nbsp;'.anchor( $group->Name, self::GROUP_ROUTE.$group->GroupID);
         }
     }
 
