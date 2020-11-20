@@ -48,9 +48,7 @@ if (!$CancelUrl) {
 
     echo '<div class="P">';
     echo '<div><b>Privacy</b></div>';
-    echo $this->Form->radioList('Privacy',[GroupModel::PRIVACY_PUBLIC => 'Public. Anyone can see the group and its content. Anyone can join.',
-        GroupModel::PRIVACY_PRIVATE => 'Private. Anyone can see the group, but only members can see its content. People must apply or be invited to join.',
-        GroupModel::PRIVACY_SECRET => 'Secret. Only members can see the group and view its content. People must be invited to join.'], ['Default' =>  GroupModel::PRIVACY_PUBLIC]);
+    echo $this->Form->radioList('Privacy',$this->data('PrivacyTypes'), ['Default' =>  GroupModel::PRIVACY_PUBLIC]);
     echo '</div>';
 
     echo '<div class="Buttons">';

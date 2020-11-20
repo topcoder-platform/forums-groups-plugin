@@ -25,6 +25,19 @@ class GroupController extends VanillaController {
     /** @var bool Whether or not to show the category dropdown. */
     public $ShowCategorySelector = true;
 
+    const UI = [
+        'challenge' => ['BreadcrumbLevel1Title' => 'Challenges',
+            'BreadcrumbLevel1Url' =>  GroupsPlugin::ROUTE_CHALLENGE_GROUPS,
+            'CreateGroupTitle' => 'Create Challenge',
+            'EditGroupTitle' => 'Edit Challenge',
+            'TypeName' => 'challenge'],
+        'regular' =>   ['BreadcrumbLevel1Title' => 'Groups',
+            'BreadcrumbLevel1Url' =>  GroupsPlugin::ROUTE_REGULAR_GROUPS,
+            'CreateGroupTitle' => 'Create Group',
+            'EditGroupTitle' => 'Edit Group',
+            'TypeName' => 'group'],
+    ];
+
     public function __construct(CategoryModel $CategoryModel) {
         parent::__construct();
         $this->GroupModel = new GroupModel();
@@ -54,6 +67,13 @@ class GroupController extends VanillaController {
         $this->addModule('BookmarkedModule');
     }
 
+    private function buildBreadcrumb($Group){
+        $level1 = self::UI[$Group->Type]['BreadcrumbLevel1Title'];
+        $level1Url = self::UI[$Group->Type]['BreadcrumbLevel1Url'];
+        return [['Name' => $level1, 'Url' => $level1Url],
+            ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID]];
+    }
+
     /**
      * Default single group display.
      *
@@ -74,8 +94,8 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group, true);
 
         $this->title($Group->Name);
-        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID]]);
+
+        $this->setData('Breadcrumbs', $this->buildBreadcrumb($Group));
         $this->setData('CurrentUserGroups', $this->GroupModel->memberOf(Gdn::session()->UserID));
         $this->setData('TotalMembers', $this->GroupModel->countOfMembers($GroupID));
         $this->setData('Leaders', $this->GroupModel->getLeaders($GroupID));
@@ -83,11 +103,12 @@ class GroupController extends VanillaController {
 
         // Find all discussions with content from after DateMarkedRead.
         $discussionModel = new DiscussionModel();
-        $wheres = ['d.GroupID' => $GroupID];
-
+        $categoryIDs = $this->GroupModel->getAllGroupCategoryIDs($Group->GroupID);
+        $wheres = ['d.CategoryID' => $categoryIDs];
+        $announcementsWheres = ['d.CategoryID' => $categoryIDs, 'd.Announce > '=> 0];
         //Don't use WhereRecent due to load all data including announce.
-        $discussions = $discussionModel->get(0, c('Vanilla.Discussions.PerPage', 30), $wheres);
-        $announcements = $discussionModel->getAnnouncements($wheres);
+        $discussions = $discussionModel->getWhere($wheres,'DateInserted', 'asc');
+        $announcements = $discussionModel->getAnnouncements($announcementsWheres );
         $this->setData('Announcements', $announcements);
         $this->setData('Discussions', $discussions);
         $this->render();
@@ -97,15 +118,21 @@ class GroupController extends VanillaController {
      * Create new group.
      *
      */
-    public function add() {
+    public function add($type = '') {
         if(!$this->GroupModel->canAddGroup()) {
             throw permissionException();
         }
-        $this->title(t('New Challenge'));
+        if($type && array_key_exists($type, self::UI)) {
+            $this->title(self::UI[$type]['CreateGroupTitle']);
+            $level1Title = self::UI[$type]['BreadcrumbLevel1Title'];
+            $level1Url = self::UI[$type]['BreadcrumbLevel1Url'];
+            $this->setData('Breadcrumbs', [['Name' => $level1Title, 'Url' => $level1Url]]);
+        }
 
         // Use the edit form without groupID
         $this->View = 'Edit';
-        $this->edit();
+
+        $this->edit(false);
     }
 
     /**
@@ -119,7 +146,8 @@ class GroupController extends VanillaController {
         if(!$this->GroupModel->canDelete($Group)) {
             throw permissionException();
         }
-        $this->title(t('Delete Challenge'));
+
+        $this->title(self::UI[$Group->Type]['DeleteGroupTitle']);
         $this->setData('Group', $Group);
        // Make sure the form knows which item we are deleting.
         $this->Form->addHidden('GroupID', $Group->GroupID);
@@ -139,25 +167,30 @@ class GroupController extends VanillaController {
      * @param int|bool $groupID
      */
     public function edit($groupID = false) {
-        if ($this->title() == '') {
-            $this->title(t('Edit Challenge'));
-        }
-
-        $Group = $this->GroupModel->getByGroupID($groupID);
-        if(!$groupID) {
-            $Group->OwnerID = Gdn::session()->UserID;
-            $Group->LeaderID = Gdn::session()->UserID;
-        } else {
+        $Group  = false;
+        if($groupID) {
+            $Group = $this->GroupModel->getByGroupID($groupID);
             if(!$this->GroupModel->canEdit($Group)) {
                 throw permissionException();
             }
+            $this->title(self::UI[$Group->Type]['EditGroupTitle']);
+            $this->setData('Breadcrumbs', $this->buildBreadcrumb($Group));
 
+        } else {
+            $Group->Type = Gdn::request()->get('type');
+            $Group->OwnerID = Gdn::session()->UserID;
+            $Group->LeaderID = Gdn::session()->UserID;
         }
-        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => $Group->Name ? $Group->Name: $this->title() ]]);
 
         $typesData = [GroupModel::TYPE_REGULAR => GroupModel::TYPE_REGULAR, GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
         $this->setData('Types', $typesData);
+
+        $type = self::UI[$Group->Type]['TypeName'];
+        $privacyTypes = [GroupModel::PRIVACY_PUBLIC => sprintf('Public. Anyone can see the %s and its content. Anyone can join.', $type),
+            GroupModel::PRIVACY_PRIVATE => sprintf('Private. Anyone can see the %s, but only members can see its content. People must apply or be invited to join.', $type),
+            GroupModel::PRIVACY_SECRET => sprintf('Secret. Only members can see the %s and view its content. People must be invited to join.', $type)];
+        $this->setData('PrivacyTypes', $privacyTypes);
+
 
         // Set the model on the form.
         $this->Form->setModel($this->GroupModel);
@@ -247,8 +280,9 @@ class GroupController extends VanillaController {
             $this->View = 'members';
         }
 
-        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('Members')]]);
+        $breadcrumb = $this->buildBreadcrumb($Group);
+        $breadcrumb[] = ['Name' => t('Members')];
+        $this->setData('Breadcrumbs', $breadcrumb);
 
         $this->title(t('Members'));
 
@@ -270,7 +304,7 @@ class GroupController extends VanillaController {
         }
 
         if ($this->GroupModel->removeMember($Group->GroupID, $MemberID) === false) {
-            $this->Form->addError('Failed to remove a member from this group.');
+            $this->Form->addError('Failed to remove a member from "'.$Group->Name.'".');
         }
 
         $this->View = 'members';
@@ -341,11 +375,11 @@ class GroupController extends VanillaController {
                     $this->Form->addError('User wasn\'t found.');
                 } else {
                     if($user->UserID == Gdn::session()->UserID) {
-                        $this->Form->addError('You are a member of this group.');
+                        $this->Form->addError('You are a member of "'.$Group->Name.'".');
                     } else {
                         try {
                             if($this->GroupModel->isMemberOfGroup($user->UserID, $GroupID)) {
-                                $this->Form->addError('User is a member of this group.');
+                                $this->Form->addError('User is a member of "'.$Group->Name.'".');
                             } else {
                                 $this->GroupModel->invite($GroupID, $user->UserID);
                                 $this->informMessage('Invitation was sent.');
@@ -378,7 +412,7 @@ class GroupController extends VanillaController {
        $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
             if ($this->GroupModel->removeMember($GroupID, Gdn::session()->UserID) === false) {
-                $this->Form->addError('Failed to leave this group.');
+                $this->Form->addError('Failed to leave "'.$Group->Name.'".');
             } else {
                 $this->setRedirectTo(GroupsPlugin::GROUPS_ROUTE);
             }

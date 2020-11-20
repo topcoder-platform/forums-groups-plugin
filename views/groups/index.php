@@ -9,7 +9,7 @@ $canAddGroup = $groupModel->canAddGroup();
 include_once $this->fetchViewLocation('helper_functions');
 
 if($canAddGroup === true) {
-    echo '<div class="groupToolbar"><a href="/group/add" class="Button Primary groupToolbar-newGroup">'. $this->data('AddButtonTitle').'</a></div>';
+    echo '<div class="groupToolbar"><a href="'.$this->data('AddButtonLink').'" class="Button Primary groupToolbar-newGroup">'. $this->data('AddButtonTitle').'</a></div>';
 }
 
 echo writeGroupSection($this->data('Groups'),  $this->data('GroupsPager') , $this->data('Title'), $this->data('NoGroups'),$this->data('MyGroupButtonTitle'), $this->data('MyGroupButtonLink'),$this);
