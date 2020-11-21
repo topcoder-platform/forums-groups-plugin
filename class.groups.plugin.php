@@ -33,6 +33,19 @@ class GroupsPlugin extends Gdn_Plugin {
     const ROLE_TOPCODER_COPILOT = 'Connect Copilot';
     const ROLE_TOPCODER_MANAGER = 'Connect Manager';
 
+    const UI = [
+        'challenge' => ['BreadcrumbLevel1Title' => 'Challenges',
+            'BreadcrumbLevel1Url' =>  self::ROUTE_CHALLENGE_GROUPS,
+            'CreateGroupTitle' => 'Create Challenge',
+            'EditGroupTitle' => 'Edit Challenge',
+            'TypeName' => 'challenge'],
+        'regular' =>   ['BreadcrumbLevel1Title' => 'Groups',
+            'BreadcrumbLevel1Url' =>  self::ROUTE_REGULAR_GROUPS,
+            'CreateGroupTitle' => 'Create Group',
+            'EditGroupTitle' => 'Edit Group',
+            'TypeName' => 'group'],
+    ];
+
     private $groupModel;
 
     /**
@@ -176,13 +189,14 @@ class GroupsPlugin extends Gdn_Plugin {
             GroupsPlugin::log('discussionsController_beforeDiscussionMetaData_handler', [
                 'GroupID' => $groupID]);
             if ($groupID) {
-                $result = '/group/' . $groupID;
+                $result = self::GROUP_ROUTE . $groupID;
                 $url = url($result, true);
 
                 $group = $groupModel->getByGroupID($groupID);
+                $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
                 echo '<div class="Meta Meta-Discussion Group-Info">'.
                         '<span class="MItem ">'.
-                            '<span class="label">Challenge: </span>'.
+                            '<span class="label">'.$type.':&nbsp;</span>'.
                             '<span class="value">'.anchor($group->Name, $url).'</span>'.
                         '</span>'.
                     '</div>';
@@ -276,8 +290,10 @@ class GroupsPlugin extends Gdn_Plugin {
      */
     public function base_discussionOptionsDropdown_handler($sender, $args){
         $Discussion = $args['Discussion'];
-        $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
         if($Discussion) {
+            // The list of Topcoder Project Roles are added to a sender by Topcoder plugin before each request
+            // for DiscussionController/GroupController
+            $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
             $groupModel = new GroupModel();
             $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
             $canView = $groupModel->canView($Discussion);
@@ -384,6 +400,21 @@ class GroupsPlugin extends Gdn_Plugin {
             redirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
         } else {
             $sender->setRedirectTo(GroupsPlugin::GROUP_ROUTE.$groupID);
+        }
+    }
+
+    /**
+     * Add a challenge name and link for each category on /categories page
+     * @param $sender
+     * @param $args
+     */
+    public function categoriesController_afterChallenge_handler($sender, $args) {
+        $category = $args['Category'];
+        $groupID = val('GroupID', $category);
+        if($groupID) {
+           $group = $this->groupModel->getByGroupID($groupID);
+           $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
+           echo '<span>'.$type.':</span>&nbsp;'.anchor( $group->Name, self::GROUP_ROUTE.$group->GroupID);
         }
     }
 
@@ -545,15 +576,25 @@ class GroupsPlugin extends Gdn_Plugin {
         $data = &$args['Activity'];
         if(($data['ActivityType'] == 'Discussion' && $data['RecordType'] == 'Discussion')) {
             $discussion = $args['Discussion'];
-            self::log(' discussionModel_BeforeRecordAdvancedNotification_handler', ['data' => $args['Activity'],
-                'category' => array_values(CategoryModel::getAncestors($discussion['CategoryID']))]);
             $userModel = new UserModel();
             $author = $userModel->getID($discussion['InsertUserID']);
             $category = CategoryModel::categories($discussion['CategoryID']);
             $categoryName = $category['Name'];
+            $groupName = '';
+            $groupLink = '';
+            if($category['GroupID']) {
+                $groupModel = new GroupModel();
+                $group =  $groupModel->getByGroupID($category['GroupID']);
+                $groupName = $group->Name;
+                $groupLink = $this->buildEmailGroupLink($group);
+            }
             $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
             $dateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
-            $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
+            $headline = sprintf('The new discussion has been posted in the category %s.' , $categoryName);
+            if($groupName) {
+                $headline = sprintf('%s: %s', $groupName, $headline);
+            }
+            $data["HeadlineFormat"] = $headline;
             // Format to Html
             $story = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
             $message = $story; // htmlspecialchars(Gdn_Format::plainText($story, 'Html'));
@@ -565,6 +606,7 @@ class GroupsPlugin extends Gdn_Plugin {
                 'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<p/>' .
                 '<span>----------------------------------------------------------------------------</span>' .
                 '<p>' .
+                    $groupLink.
                     '<span>Discussion: ' . $discussion['Name'] . '</span><br/>' .
                     '<span>Author: ' . $author->Name . '</span><br/>' .
                     '<span>Category: ' . implode('›', $categoryBreadcrumbs) . '</span><br/>' .
@@ -575,22 +617,32 @@ class GroupsPlugin extends Gdn_Plugin {
     }
 
     public function commentModel_beforeRecordAdvancedNotification($sender, $args){
-
         $data = &$args['Activity'];
         if(($data['ActivityType'] == 'Comment' && $data['RecordType'] == 'Comment')) {
             $discussion = $args['Discussion'];
             $comment = $args["Comment"];
-            self::log(' commentModel_beforeNotification_handler', ['data' => $args['Activity'],
-                'category' => array_values(CategoryModel::getAncestors($discussion['CategoryID']))]);
             $userModel = new UserModel();
             $discussionAuthor = $userModel->getID($discussion['InsertUserID']);
             $commentAuthor = $userModel->getID($comment['InsertUserID']);
             $category = CategoryModel::categories($discussion['CategoryID']);
             $discussionName = $discussion['Name'];
             $categoryName = $category['Name'];
+            $groupName = '';
+            $groupLink = '';
+            if($category['GroupID']) {
+                $groupModel = new GroupModel();
+                $group =  $groupModel->getByGroupID($category['GroupID']);
+                $groupName = $group->Name;
+                $groupLink = $this->buildEmailGroupLink($group);
+            }
             $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
             $discussionDateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
             $commentDateInserted = Gdn_Format::dateFull($comment['DateInserted']);
+            $headline = $data["HeadlineFormat"];
+            if($groupName) {
+                $headline = sprintf('%s: %s', $groupName, $headline);
+            }
+            $data["HeadlineFormat"] = $headline;
             // $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
             // Format to Html
             $discussionStory = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
@@ -602,7 +654,9 @@ class GroupsPlugin extends Gdn_Plugin {
                 '<p>You are watching the discussion "' . $discussionName . '" in the category "' .$categoryName.'" '.
                 'which was updated ' . $commentDateInserted . ' by ' . $commentAuthor->Name . ':</p>' .
                 '<span>----------------------------------------------------------------------------</span>' .
-                '<p>Message: </p>' .
+                '<p>'.$groupLink.
+                    '<span>Message:</span>'.
+                 '</p>' .
                 '<p>' .
                      $commentStory .
                 '</p>'.
@@ -622,6 +676,21 @@ class GroupsPlugin extends Gdn_Plugin {
             }
         }
     }
+
+    // Build a group link for an email template
+    private function buildEmailGroupLink($group){
+        if($group) {
+            $groupName = $group->Name;
+            $groupType = ucfirst(self::UI[$group->Type]['TypeName']);
+            $color = c('Garden.EmailTemplate.ButtonTextColor');
+
+            return sprintf('<span>%s: %s </span><br/>', $groupType, anchor($groupName, url(self::GROUP_ROUTE.$group->GroupID, true), '',
+                ['rel'=>'noopener noreferrer', 'target'=>'_blank', 'style'=>'color:'.$color]));
+        }
+        return '';
+    }
+
+
     /**
      * Add Topcoder Roles
      * @param $sender

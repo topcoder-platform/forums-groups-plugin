@@ -227,7 +227,7 @@ if (!function_exists('writeGroupHeader')) {
                     </span>
                     <span class="MItem "><span class="label"><?php  echo  $totalMembers.' member(s)'; ?></span></span>
                     <span class="MItem "><span class="label">Created on <?php  echo  $group->DateInserted; ?></span></span>
-                    <span class="MItem "><span class="label">Privacy: </span><span class="value"><?php  echo  $group->Type; ?></span></span>
+                    <span class="MItem "><span class="label">Privacy: </span><span class="value"><?php  echo  $group->Privacy; ?></span></span>
                 </div>
                 <?php }?>
             </div>
