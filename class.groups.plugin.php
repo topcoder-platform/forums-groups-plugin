@@ -296,7 +296,7 @@ class GroupsPlugin extends Gdn_Plugin {
             $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
             $groupModel = new GroupModel();
             $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
-            $canView = $groupModel->canView($Discussion);
+            $canView = $groupModel->canViewDiscussion($Discussion);
             $canEdit = $groupModel->canEditDiscussion($Discussion);
             $canDelete = $groupModel->canDeleteDiscussion($Discussion);
             $canDismiss = $groupModel->canDismissDiscussion($Discussion);

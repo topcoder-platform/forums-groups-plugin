@@ -1637,8 +1637,7 @@ class GroupModel extends Gdn_Model {
     }
 
     public function canRefetchDiscussion($discussion) {
-        $groupID = $discussion->GroupID;
-        return $this->canEditDiscussion($discussion);
+         return $this->canEditDiscussion($discussion);
     }
 
     public function canDeleteDiscussion($discussion) {
