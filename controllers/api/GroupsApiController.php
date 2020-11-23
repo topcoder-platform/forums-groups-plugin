@@ -192,11 +192,14 @@ class GroupsApiController extends AbstractApiController {
         if(!$user) {
             throw new NotFoundException('User');
         }
+
         if(!$this->groupModel->canManageMembers($group)) {
             throw new ClientException('Don\'t have permissions to add a member to this group.');
         }
 
-        $this->groupModel->join($group->GroupID, $user->UserID);
+        $watch = $body['watch'];
+        $follow = $body['follow'];
+        $this->groupModel->join($group->GroupID, $user->UserID, $watch, $follow);
     }
 
     /**
@@ -263,6 +266,8 @@ class GroupsApiController extends AbstractApiController {
             $this->groupMemberPostSchema = $this->schema(
                 Schema::parse([
                     'userID:i?' => 'The userID.',
+                    'watch:b?' => 'Watch all group categories',
+                    'follow:b?' => 'Follow all group categories',
                 ]),
                 'GroupMemberPost'
             );

@@ -271,6 +271,12 @@ components:
         userID:
           description: The Vanilla user ID
           type: integer
+        watch:
+          description: Watch all group categories
+          type: boolean
+        follow:
+          description: Follow all group categories
+          type: boolean
       required:
         - userID
       type: object
