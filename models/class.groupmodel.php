@@ -814,17 +814,23 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     * Join a new member
+     * Join a new member.
      * @param $GroupID
      * @param $UserID
+     * @param bool $watched
+     * @param bool $followed
      * @return bool|Gdn_DataSet|object|string
      */
-    public function join($GroupID, $UserID){
+    public function join($GroupID, $UserID, $watched = true, $followed = true ){
         $Fields = ['Role' => GroupModel::ROLE_MEMBER, 'GroupID' => $GroupID,'UserID' => $UserID, 'DateInserted' => Gdn_Format::toDateTime()];
         if( $this->SQL->getWhere('UserGroup', ['GroupID' => $GroupID,'UserID' => $UserID])->numRows() == 0) {
             $this->SQL->insert('UserGroup', $Fields);
-            $this->followGroup($GroupID, $UserID);
-            $this->watchGroup($GroupID, $UserID);
+            if($followed) {
+                $this->followGroup($GroupID, $UserID);
+            }
+            if($watched) {
+                $this->watchGroup($GroupID, $UserID);
+            }
             $this->notifyJoinGroup($GroupID, $UserID);
         }
     }
