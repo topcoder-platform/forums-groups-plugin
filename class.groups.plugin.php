@@ -567,6 +567,10 @@ class GroupsPlugin extends Gdn_Plugin {
         return false;
     }
 
+    //
+    // EMAIL TEMPLATES
+    //
+
     /**
      *  New discussion has been posted
      * @param $sender
@@ -576,6 +580,8 @@ class GroupsPlugin extends Gdn_Plugin {
         $data = &$args['Activity'];
         if(($data['ActivityType'] == 'Discussion' && $data['RecordType'] == 'Discussion')) {
             $discussion = $args['Discussion'];
+            $mediaData = $this->getMediaData('discussion', $data['RecordID']);
+            GroupsPlugin::log(' TopcoderEmailTemplate:buildEmail', ['mediaData' => $mediaData]);
             $userModel = new UserModel();
             $author = $userModel->getID($discussion['InsertUserID']);
             $category = CategoryModel::categories($discussion['CategoryID']);
@@ -606,22 +612,29 @@ class GroupsPlugin extends Gdn_Plugin {
                 'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<p/>' .
                 '<span>----------------------------------------------------------------------------</span>' .
                 '<p>' .
-                    $groupLink.
-                    '<span>Discussion: ' . $discussion['Name'] . '</span><br/>' .
-                    '<span>Author: ' . $author->Name . '</span><br/>' .
-                    '<span>Category: ' . implode('›', $categoryBreadcrumbs) . '</span><br/>' .
-                    '<span>Message:</span><br/> ' . $message .
-                '</p>' .
+                $groupLink .
+                '<span>Discussion: ' . $discussion['Name'] . '</span><br/>' .
+                '<span>Author: ' . $author->Name . '</span><br/>' .
+                '<span>Category: ' . implode('›', $categoryBreadcrumbs) . '</span><br/>' .
+                '<span>Message:</span>' . $message .
+                $this->formatMediaData($mediaData) .
+                '</p><br/>'.
                 '<span>----------------------------------------------------------------------------</span>';
         }
     }
 
+    /**
+     * New comment has been posted
+     * @param $sender
+     * @param $args
+     */
     public function commentModel_beforeRecordAdvancedNotification($sender, $args){
         $data = &$args['Activity'];
         if(($data['ActivityType'] == 'Comment' && $data['RecordType'] == 'Comment')) {
             $discussion = $args['Discussion'];
             $comment = $args["Comment"];
             $userModel = new UserModel();
+            $mediaData = $this->getMediaData('comment', $data['RecordID']);
             $discussionAuthor = $userModel->getID($discussion['InsertUserID']);
             $commentAuthor = $userModel->getID($comment['InsertUserID']);
             $category = CategoryModel::categories($discussion['CategoryID']);
@@ -648,7 +661,7 @@ class GroupsPlugin extends Gdn_Plugin {
             $discussionStory = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
             $commentStory = condense(Gdn_Format::to($comment['Body'], $comment['Format']));
             // We just converted it to HTML. Make sure everything downstream knows it.
-            // Taking this HTML and feeding it into the Rich Format for example, would be invalid.
+            // Taking this HTML and feeding it into the required format for example, would be invalid.
             $data['Format'] = 'Html';
             $data["Story"] =
                 '<p>You are watching the discussion "' . $discussionName . '" in the category "' .$categoryName.'" '.
@@ -656,11 +669,10 @@ class GroupsPlugin extends Gdn_Plugin {
                 '<span>----------------------------------------------------------------------------</span>' .
                 '<p>'.$groupLink.
                     '<span>Message:</span>'.
-                 '</p>' .
-                '<p>' .
-                     $commentStory .
-                '</p>'.
-                '<span>----------------------------------------------------------------------------</span>';
+                '</p>' .
+                 $commentStory .
+                $this->formatMediaData($mediaData).
+                '<br/><span>----------------------------------------------------------------------------</span>';
             $parentCommentID = (int)$comment['ParentCommentID'];
             if($parentCommentID > 0) {
                 $commentModel = new CommentModel();
@@ -678,18 +690,50 @@ class GroupsPlugin extends Gdn_Plugin {
     }
 
     // Build a group link for an email template
-    private function buildEmailGroupLink($group){
-        if($group) {
+    private function buildEmailGroupLink($group) {
+        if ($group) {
             $groupName = $group->Name;
             $groupType = ucfirst(self::UI[$group->Type]['TypeName']);
             $color = c('Garden.EmailTemplate.ButtonTextColor');
-
-            return sprintf('<span>%s: %s </span><br/>', $groupType, anchor($groupName, url(self::GROUP_ROUTE.$group->GroupID, true), '',
-                ['rel'=>'noopener noreferrer', 'target'=>'_blank', 'style'=>'color:'.$color]));
+            return sprintf('<span>%s: %s </span><br/>', $groupType, anchor($groupName, url(GroupsPlugin::GROUP_ROUTE . $group->GroupID, true), '',
+                ['rel' => 'noopener noreferrer', 'target' => '_blank', 'style' => 'color:' . $color]));
         }
         return '';
     }
 
+    // Format attachments
+    private function formatMediaData($mediaData){
+        if(count($mediaData) == 0) {
+            return '';
+        }
+
+        $output = '<span>Attachments:</span>';
+        foreach ($mediaData as $mediaItem) {
+            $name = val('Name', $mediaItem);
+            $path = val('Path', $mediaItem);
+            $link = anchor($name, $path, ['rel' => 'noopener noreferrer', 'target' => '_blank']);
+            $output .= sprintf('<span>%s</span>&nbsp;', $link);
+        }
+        return $output;
+    }
+
+    // Load data from Media Table
+    private function getMediaData($type, $id) {
+        $mediaData = [];
+        $mediaModel = new MediaModel();
+        if (in_array($type, ['discussion', 'comment'])) {
+            if (is_numeric($id)) {
+                $sqlWhere = [
+                    'ForeignTable' => $type,
+                    'ForeignID' => $id
+                ];
+                $mediaData = $mediaModel->getWhere($sqlWhere)->resultArray();
+            }
+        }
+        return $mediaData;
+    }
+
+    // END: EMAIL TEMPLATES
 
     /**
      * Add Topcoder Roles
