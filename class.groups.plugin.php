@@ -707,12 +707,14 @@ class GroupsPlugin extends Gdn_Plugin {
             return '';
         }
 
-        $output = '<span>Attachments:</span>';
+        $output = '<span>Attachments:</span><br/>';
         foreach ($mediaData as $mediaItem) {
             $name = val('Name', $mediaItem);
             $path = val('Path', $mediaItem);
+            $size = val('Size', $mediaItem);
+            $formattedSize = Gdn_Upload::formatFileSize($size);
             $link = anchor($name, $path, ['rel' => 'noopener noreferrer', 'target' => '_blank']);
-            $output .= sprintf('<span>%s</span>&nbsp;', $link);
+            $output .= sprintf('<span style="white-space: nowrap">%s (%s)</span><br/>', $link, $formattedSize);
         }
         return $output;
     }
