@@ -27,7 +27,7 @@ if (!$CancelUrl) {
 
     echo '<div class="P">';
     echo $this->Form->label('Type', 'Type');
-    echo $this->Form->dropDown('Type', $this->data('Types'), ['IncludeNull' => t('All Types')]);
+    echo $this->Form->dropDown('Type', $this->data('Types'));
     echo '</div>';
 
     echo '<div class="P">';

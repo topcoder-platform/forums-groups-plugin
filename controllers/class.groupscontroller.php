@@ -49,6 +49,7 @@ class GroupsController extends VanillaController {
             $this->View = 'index';
             $this->title('Challenges');
             $this->setData('Title', 'My Challenges');
+            $this->setData('ShowAddButton', false);
             $this->setData('AddButtonTitle', 'Challenge');
             $this->setData('AddButtonLink', '/group/add?type=challenge');
             $this->setData('AvailableGroupTitle', 'Available Challenges');
@@ -63,6 +64,7 @@ class GroupsController extends VanillaController {
             $this->View = 'index';
             $this->title('Groups');
             $this->setData('Title', 'My Groups');
+            $this->setData('ShowAddButton', true);
             $this->setData('AddButtonTitle', 'Group');
             $this->setData('AddButtonLink', '/group/add?type=regular');
             $this->setData('MyGroupButtonTitle', 'All My Groups');

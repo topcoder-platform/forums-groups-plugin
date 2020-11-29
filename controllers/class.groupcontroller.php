@@ -165,20 +165,25 @@ class GroupController extends VanillaController {
             $this->setData('Breadcrumbs', $this->buildBreadcrumb($Group));
 
         } else {
-            $Group->Type = Gdn::request()->get('type');
+            $Group->Type = GroupModel::TYPE_REGULAR;
             $Group->OwnerID = Gdn::session()->UserID;
             $Group->LeaderID = Gdn::session()->UserID;
         }
 
-        $typesData = [GroupModel::TYPE_REGULAR => GroupModel::TYPE_REGULAR, GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
-        $this->setData('Types', $typesData);
-
+        // Set Privacy Types
         $type = GroupsPlugin::UI[$Group->Type]['TypeName'];
         $privacyTypes = [GroupModel::PRIVACY_PUBLIC => sprintf('Public. Anyone can see the %s and its content. Anyone can join.', $type),
             GroupModel::PRIVACY_PRIVATE => sprintf('Private. Anyone can see the %s, but only members can see its content. People must apply or be invited to join.', $type),
             GroupModel::PRIVACY_SECRET => sprintf('Secret. Only members can see the %s and view its content. People must be invited to join.', $type)];
         $this->setData('PrivacyTypes', $privacyTypes);
 
+        // Set Type dropbox
+        if($Group->Type == GroupModel::TYPE_REGULAR || $groupID === false) { // Regular Groups can be created from UI only
+            $typesData = [GroupModel::TYPE_REGULAR => GroupModel::TYPE_REGULAR, GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
+        } else if ($Group->Type == GroupModel::TYPE_CHALLENGE){
+            $typesData = [GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
+        }
+        $this->setData('Types', $typesData);
 
         // Set the model on the form.
         $this->Form->setModel($this->GroupModel);
@@ -187,23 +192,32 @@ class GroupController extends VanillaController {
         $this->Form->addHidden('GroupID', $groupID);
         $this->Form->addHidden('OwnerID', $Group->OwnerID);
 
-        // If seeing the form for the first time...
-        if ($this->Form->authenticatedPostBack() === false) {
+        if ($this->Form->authenticatedPostBack(true)) { //The form was submitted
+            if (!Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_ADD_PERMISSION)) {
+                $this->Form->addError('You do not have permission to add a group');
+            }
+
+            if ($this->Form->errorCount() == 0) {
+                // If the form has been posted back...
+                $isIconUploaded = $this->Form->saveImage('Icon');
+                $isBannerUploaded = $this->Form->saveImage('Banner');
+                $data = $this->Form->formValues();
+                if ($groupID = $this->GroupModel->save($data)) {
+                    $this->Form->setValidationResults($this->GroupModel->validationResults());
+                    if($groupID) {
+                        $this->setRedirectTo('group/' . $groupID);
+                    }
+                    $this->View = 'Edit';
+                } else {
+                    $this->Form->setValidationResults($this->GroupModel->validationResults());
+                }
+
+            } else {
+                $this->errorMessage($this->Form->errors());
+            }
+        }  else {
             // Get the group data for the requested $GroupID and put it into the form.
             $this->Form->setData($Group);
-        } else {
-
-            // If the form has been posted back...
-            $this->Form->formValues();
-            $this->Form->saveImage('Icon');
-            $this->Form->saveImage('Banner');
-            if ($groupID = $this->Form->save()) {
-                if ($this->deliveryType() === DELIVERY_TYPE_DATA) {
-                    $this->index($groupID);
-                    return;
-                }
-                $this->setRedirectTo('group/'.$groupID );
-            }
         }
 
         $this->render();
@@ -775,14 +789,20 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group);
         $this->Form->setModel($this->CategoryModel);
         $slugify = new Slugify();
-        $parentCategory = $Group->ChallengeID ? $this->CategoryModel->getByCode($Group->ChallengeID): -1;
+
+        $parentCategory = $this->GroupModel->getRootGroupCategory($Group);
         $this->Form->addHidden('ParentCategoryID', $parentCategory->CategoryID);
         $this->Form->addHidden('DisplayAs', 'Discussions');
         $this->Form->addHidden('AllowFileUploads',1);
         $this->Form->addHidden('UrlCode','');
         $this->Form->addHidden('GroupID',$GroupID);
         if ($this->Form->authenticatedPostBack(true)) {
-            $this->Form->setFormValue('UrlCode', $Group->ChallengeID.'-'.$slugify->slugify($this->Form->getValue('Name'), '-'));
+            if($Group->Type === GroupModel::TYPE_CHALLENGE) {
+                $this->Form->setFormValue('UrlCode', $Group->ChallengeID . '-' . $slugify->slugify($this->Form->getValue('Name'), '-'));
+            }
+            //else {
+            //    $this->Form->setFormValue('UrlCode', 'group-'.$Group->GroupID.'-'.$slugify->slugify($this->Form->getValue('Name'), '-'));
+            // }
             $newCategoryID = $this->Form->save();
             if(!$newCategoryID) {
                 $this->errorMessage($this->Form->errors());
