@@ -991,19 +991,22 @@ class GroupModel extends Gdn_Model {
 
         $groupID = val('GroupID', $formPostValues);
         $ownerID = val('OwnerID', $formPostValues);
+        $type = val('Type', $formPostValues);
+        $name = val('Name', $formPostValues);
+        $archived = val('Archived', $formPostValues);
         $insert = $groupID > 0 ? false : true;
 
         if ($insert) {
             // Figure out the next group ID.
             $maxGroupID = $this->SQL->select('g.GroupID', 'MAX')->from('Group g')->get()->value('GroupID', 0);
             $groupID = $maxGroupID + 1;
-
             $this->addInsertFields($formPostValues);
             $formPostValues['GroupID'] = strval($groupID); // string for validation
         } else {
             $this->addUpdateFields($formPostValues);
         }
 
+        // TODO: Move creating Challenge group categories from challenge processor
         // Validate the form posted values
         if ($this->validate($formPostValues, $insert)) {
             $fields = $this->Validation->schemaValidationFields();
@@ -1013,6 +1016,23 @@ class GroupModel extends Gdn_Model {
                 $this->update($fields, ['GroupID' => $groupID]);
             } else {
                 $this->insert($fields);
+                //Create a category for a regular group
+                if($type == GroupModel::TYPE_REGULAR) {
+                    $categoryModel = new CategoryModel();
+                    $parentCategory = $categoryModel->getByCode('groups');
+                    $categoryData = [ 'Name' => $name,
+                        'ParentCategoryID' => $parentCategory->CategoryID,
+                        'DisplayAs' => 'Discussions',
+                        'AllowFileUploads' => 1,
+                        'UrlCode' => 'group-'.$groupID,
+                        'GroupID' => $groupID,
+                        'Archived' => $archived];
+                    $categoryID = $categoryModel->save($categoryData);
+                    // TODO
+                    if(!$categoryID) {
+                        // Error
+                    }
+                }
                 $this->SQL->insert(
                     'UserGroup',
                     [
@@ -1053,8 +1073,28 @@ class GroupModel extends Gdn_Model {
      * @inheritdoc
      */
     public function validate($values, $insert = false) {
+        $result = true;
+        // TODO: Move Challenge group validation from challenge processor
+        $type = val('Type', $values);
+        $urlCode = val('UrlCode', $values);
+        if($insert === true) {
+            $categoryModel = new CategoryModel();
+            if($type === GroupModel::TYPE_REGULAR) {
+                $category = $categoryModel->getByCode($urlCode);
+                if($category) {
+                    $result = false;
+                    $this->Validation->addValidationResult('UrlCode', 'Group UrlCode has existed.');
+                }
+                $parentCategory = $categoryModel->getByCode('groups');
+                if (!$parentCategory) {
+                    $result = false;
+                    $this->Validation->addValidationResult('ParentCategoryID', 'Groups category was not found.');
+                }
 
-        return parent::validate($values, $insert);
+            }
+        }
+        $result = $result && parent::validate($values, $insert);
+        return $result;
     }
 
     /**
@@ -1304,6 +1344,14 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canManageCategories($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
+
+        if($group->Type === GroupModel::TYPE_REGULAR) {
+            return false;
+        }
+
         return $this->isProjectCopilot() || $this->isProjectManager() || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION);
     }
 
@@ -1329,6 +1377,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canEdit($group) {
+       if((int)$group->Archived === 1) {
+           return false;
+       }
        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
        $groupRole = val('Role', $result, null);
        if($groupRole == GroupModel::ROLE_LEADER ||
@@ -1347,6 +1398,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canDelete($group){
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         return Gdn::session()->UserID == $group->OwnerID || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_DELETE_PERMISSION);
     }
 
@@ -1355,6 +1409,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canJoin($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         return $group->Privacy == GroupModel::PRIVACY_PUBLIC;
     }
 
@@ -1363,6 +1420,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canRemoveMember($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
         if($groupRole == GroupModel::ROLE_LEADER ||
@@ -1377,6 +1437,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canChangeGroupRole($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
         if($groupRole == GroupModel::ROLE_LEADER ||
@@ -1391,6 +1454,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canLeave($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         if(isset($group->ChallengeID)) {
             return false;
         }
@@ -1409,6 +1475,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canManageMembers($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
         if($groupRole == GroupModel::ROLE_LEADER ||
@@ -1423,6 +1492,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canInviteNewMember($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
         if($groupRole === GroupModel::ROLE_LEADER ||
@@ -1438,6 +1510,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canAddDiscussion($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
         if($groupRole || Gdn::session()->UserID == $group->OwnerID) {
@@ -1451,6 +1526,9 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canAddAnnouncement($group) {
+        if((int)$group->Archived === 1) {
+            return false;
+        }
         $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         $groupRole = val('Role', $result, null);
         if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID == $group->OwnerID
@@ -1763,5 +1841,25 @@ class GroupModel extends Gdn_Model {
 
         $group->Archived = 1;
         $this->save($group);
+    }
+
+    public function getGroupDiscussionCategories($group){
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+        $categoryModel = new  CategoryModel();
+        return $categoryModel->getWhere(['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
+    }
+
+    public function getRootGroupCategory($group){
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+        $categoryModel = new  CategoryModel();
+        if($group->ChallengeID) {
+            return $categoryModel->getByCode($group->ChallengeID);
+        }
+
+        return -1; //return Vanilla root
     }
 }

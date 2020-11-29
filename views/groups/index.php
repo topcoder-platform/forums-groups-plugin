@@ -8,7 +8,7 @@ $canAddGroup = $groupModel->canAddGroup();
 
 include_once $this->fetchViewLocation('helper_functions');
 
-if($canAddGroup === true) {
+if($canAddGroup === true && $this->data('ShowAddButton') === true) {
     echo '<div class="groupToolbar"><a href="'.$this->data('AddButtonLink').'" class="Button Primary groupToolbar-newGroup">'. $this->data('AddButtonTitle').'</a></div>';
 }
 

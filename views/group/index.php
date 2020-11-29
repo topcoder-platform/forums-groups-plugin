@@ -18,7 +18,7 @@ $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
 $groupModel = new GroupModel();
 $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
 $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
-
+$discussionCategories =  $groupModel->getGroupDiscussionCategories($Group);
 ?>
 <?php echo writeGroupHeader($Group, true, $Owner, $Leaders, $TotalMembers);?>
 
@@ -30,7 +30,13 @@ $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
                 <?php
 
                 if($groupModel->canAddAnnouncement($Group)) {
-                    echo anchor('New Announcement', '/group/announcement/' . $Group->GroupID, 'Button Primary', '');
+                    if(count($discussionCategories) > 0 && $Group->Type == GroupModel::TYPE_REGULAR) {
+                        // The group category is selected automatically
+                        $firstCategory = $discussionCategories[0];
+                        echo anchor('New Announcement', '/post/discussion/'.$firstCategory['UrlCode'], 'Button Primary', '');
+                    } else {
+                        echo anchor('New Announcement', '/post/discussion/', 'Button Primary', '');
+                    }
                 }
                 ?>
             </div>
@@ -53,7 +59,13 @@ $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
             <div class="Button-Controls">
                  <?php
                  if($groupModel->canAddDiscussion($Group)) {
-                     echo anchor('New Discussion', '/group/discussion/' . $Group->GroupID, 'Button Primary', '');
+                     // The group category is selected automatically
+                     if (count($discussionCategories) > 0 && $Group->Type == GroupModel::TYPE_REGULAR) {
+                         $firstCategory = $discussionCategories[0];
+                         echo anchor('New Discussion', '/post/discussion/' . $firstCategory['UrlCode'], 'Button Primary', '');
+                     } else {
+                         echo anchor('New Discussion', '/post/discussion/', 'Button Primary', '');
+                     }
                  }
                  ?>
             </div>
