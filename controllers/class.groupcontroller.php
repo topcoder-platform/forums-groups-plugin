@@ -89,6 +89,27 @@ class GroupController extends VanillaController {
         $this->setData('Leaders', $this->GroupModel->getLeaders($GroupID));
         $this->setData('Members', $this->GroupModel->getMembers($GroupID,[],'',30,0));
 
+        $groupDiscussions =  $this->GroupModel->getGroupDiscussionCategories($Group);
+        $defaultDiscussionUrl = '/post/discussion/';
+        if($Group->Type == GroupModel::TYPE_REGULAR) {
+            if(count($groupDiscussions) > 0) {
+                $defaultDiscussionUrl .= $groupDiscussions[0]['UrlCode'];
+            }
+        } else if($Group->Type == GroupModel::TYPE_CHALLENGE) {
+            if(count($groupDiscussions) == 1) {
+                $defaultDiscussionUrl .= $groupDiscussions[0]['UrlCode'];
+            } else {
+                foreach ($groupDiscussions as $groupDiscussion) {
+                    if ($groupDiscussion['Name'] == 'Code Questions') {
+                        $defaultDiscussionUrl .= $groupDiscussion['UrlCode'];
+                        break;
+                    }
+                }
+            }
+        }
+
+        $this->setData('DefaultDiscussionUrl', $defaultDiscussionUrl);
+
         // Find all discussions with content from after DateMarkedRead.
         $discussionModel = new DiscussionModel();
         $categoryIDs = $this->GroupModel->getAllGroupCategoryIDs($Group->GroupID);

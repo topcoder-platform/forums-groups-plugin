@@ -18,7 +18,7 @@ $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
 $groupModel = new GroupModel();
 $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
 $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
-$discussionCategories =  $groupModel->getGroupDiscussionCategories($Group);
+
 ?>
 <?php echo writeGroupHeader($Group, true, $Owner, $Leaders, $TotalMembers);?>
 
@@ -30,13 +30,7 @@ $discussionCategories =  $groupModel->getGroupDiscussionCategories($Group);
                 <?php
 
                 if($groupModel->canAddAnnouncement($Group)) {
-                    if(count($discussionCategories) > 0 && $Group->Type == GroupModel::TYPE_REGULAR) {
-                        // The group category is selected automatically
-                        $firstCategory = $discussionCategories[0];
-                        echo anchor('New Announcement', '/post/discussion/'.$firstCategory['UrlCode'], 'Button Primary', '');
-                    } else {
-                        echo anchor('New Announcement', '/post/discussion/', 'Button Primary', '');
-                    }
+                   echo anchor('New Announcement', $this->data('DefaultDiscussionUrl'), 'Button Primary', '');
                 }
                 ?>
             </div>
@@ -60,12 +54,7 @@ $discussionCategories =  $groupModel->getGroupDiscussionCategories($Group);
                  <?php
                  if($groupModel->canAddDiscussion($Group)) {
                      // The group category is selected automatically
-                     if (count($discussionCategories) > 0 && $Group->Type == GroupModel::TYPE_REGULAR) {
-                         $firstCategory = $discussionCategories[0];
-                         echo anchor('New Discussion', '/post/discussion/' . $firstCategory['UrlCode'], 'Button Primary', '');
-                     } else {
-                         echo anchor('New Discussion', '/post/discussion/', 'Button Primary', '');
-                     }
+                     echo anchor('New Discussion', $this->data('DefaultDiscussionUrl'), 'Button Primary', '');
                  }
                  ?>
             </div>
