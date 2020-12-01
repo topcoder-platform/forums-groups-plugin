@@ -796,21 +796,29 @@ class GroupModel extends Gdn_Model {
         return $data === false ? 0 : $data->Count;
     }
 
-    public function checkPermission($userID,$groupID,$permissions = null, $fullMatch = false){
-        if(is_array($permissions)) {
-            return $this->isMemberOfGroup($userID,$groupID) && GDN::session()->checkPermission(
-                $permissions,$fullMatch);
-        } else if(is_string($permissions)) {
-            return $this->isMemberOfGroup($userID,$groupID) && GDN::session()->checkPermission(
-                    [$permissions],$fullMatch);
+    public function checkPermission($userID,$groupID,$categoryID = null, $permissionCategoryID = null, $permissions = null, $fullMatch = true){
+        // Check access to a category
+        $result = false;
+        if($this->isMemberOfGroup($userID,$groupID)) {
+            if ($permissions == null) {
+                $result = true;
+            } else {
+                $result = Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $permissionCategoryID)
+                    || Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $categoryID);
+            }
+        } else {
+            // User is not a group member, checking admin group permissions
+            if ( GDN::session()->checkPermission([
+                    GroupsPlugin::GROUPS_GROUP_ADD_PERMISSION,
+                    GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION,
+                    GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION,
+                    GroupsPlugin::GROUPS_EMAIL_INVITATIONS_PERMISSION
+                ], false)) {
+                $result =  Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $permissionCategoryID)
+                    || Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $categoryID);;
+            }
         }
-
-        return $this->isMemberOfGroup($userID,$groupID) || GDN::session()->checkPermission([
-                GroupsPlugin::GROUPS_GROUP_ADD_PERMISSION,
-                GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION,
-                GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION,
-                GroupsPlugin::GROUPS_EMAIL_INVITATIONS_PERMISSION
-            ],$fullMatch);
+        return $result;
     }
 
     /**
