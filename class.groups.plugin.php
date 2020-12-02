@@ -678,7 +678,7 @@ class GroupsPlugin extends Gdn_Plugin {
             if($parentCommentID > 0) {
                 $commentModel = new CommentModel();
                 $parentComment = $commentModel->getID($parentCommentID, DATASET_TYPE_ARRAY);
-                $parentCommentAuthor = $userModel->getID($comment['InsertUserID']);
+                $parentCommentAuthor = $userModel->getID($parentComment['InsertUserID']);
                 $parentCommentStory = condense(Gdn_Format::to($parentComment['Body'], $parentComment['Format']));
                 $data['Story'] .=
                     '<p>Original Message (by '.$parentCommentAuthor->Name.' ):</p>'.
