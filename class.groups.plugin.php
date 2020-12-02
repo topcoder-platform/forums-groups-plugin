@@ -293,7 +293,8 @@ class GroupsPlugin extends Gdn_Plugin {
         if($Discussion) {
             // The list of Topcoder Project Roles are added to a sender by Topcoder plugin before each request
             // for DiscussionController/GroupController
-            $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
+            $data = $sender->Data;
+            $currentTopcoderProjectRoles = val('ChallengeCurrentUserProjectRoles', $data, []);
             $groupModel = new GroupModel();
             $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
             $canView = $groupModel->canViewDiscussion($Discussion);
@@ -818,14 +819,14 @@ class GroupsPlugin extends Gdn_Plugin {
     }
 
     public static function log($message, $data= []) {
-       // if (c('Debug')) {
+        if (c('Debug')) {
             Logger::event(
                 'groups_plugin',
-                Logger::INFO,
+                Logger::DEBUG,
                 $message,
                 $data
             );
-     //   }
+        }
     }
  }
 
