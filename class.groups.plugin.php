@@ -603,8 +603,7 @@ class GroupsPlugin extends Gdn_Plugin {
             }
             $data["HeadlineFormat"] = $headline;
             // Format to Html
-            $story = Gdn::formatService()->renderHTML($discussion['Body'], $discussion['Format']);
-            $message = $story; // htmlspecialchars(Gdn_Format::plainText($story, 'Html'));
+            $message = Gdn::formatService()->renderQuote($discussion['Body'], $discussion['Format']);
             // We just converted it to HTML. Make sure everything downstream knows it.
             // Taking this HTML and feeding it into the Rich Format for example, would be invalid.
             $data['Format'] = 'Html';
@@ -660,7 +659,7 @@ class GroupsPlugin extends Gdn_Plugin {
             // $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
             // Format to Html
             $discussionStory = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
-            $commentStory = Gdn::formatService()->renderHTML($comment['Body'],$comment['Format']);
+            $commentStory = Gdn::formatService()->renderQuote($comment['Body'],$comment['Format']);
             // We just converted it to HTML. Make sure everything downstream knows it.
             // Taking this HTML and feeding it into the required format for example, would be invalid.
             $data['Format'] = 'Html';
