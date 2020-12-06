@@ -558,7 +558,7 @@ class GroupsPlugin extends Gdn_Plugin {
                 }
             }
 
-            $metaData= $userMetaModel->getUserMeta(Gdn::session()->UserID, $newCommentKey);
+            $metaData= $userMetaModel->getUserMeta($userID, $newCommentKey);
             foreach ($metaData as $key => $value) {
                 if($value != null) {
                     return true;
