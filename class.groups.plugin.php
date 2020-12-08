@@ -529,7 +529,7 @@ class GroupsPlugin extends Gdn_Plugin {
             $userMetaModel->setUserMeta($userID, $newPopupCommentKey , $watched);
             $userMetaModel->setUserMeta($userID, $newPopupDiscussionKey , $watched);
         }
-        return $sender->hasWatched($categoryIDs,$userID);
+        return;// $sender->hasWatched($categoryIDs,$userID);
     }
 
     /**
