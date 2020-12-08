@@ -830,17 +830,19 @@ class GroupModel extends Gdn_Model {
      * @return bool|Gdn_DataSet|object|string
      */
     public function join($GroupID, $UserID, $watched = true, $followed = true ){
+        $results = [];
         $Fields = ['Role' => GroupModel::ROLE_MEMBER, 'GroupID' => $GroupID,'UserID' => $UserID, 'DateInserted' => Gdn_Format::toDateTime()];
         if( $this->SQL->getWhere('UserGroup', ['GroupID' => $GroupID,'UserID' => $UserID])->numRows() == 0) {
             $this->SQL->insert('UserGroup', $Fields);
-            if($followed) {
-                $this->followGroup($GroupID, $UserID);
+            if($followed === true) {
+               $results['Followed'] = $this->followGroup($GroupID, $UserID);
             }
-            if($watched) {
-                $this->watchGroup($GroupID, $UserID);
+            if($watched === true) {
+               $results['Watched'] = $this->watchGroup($GroupID, $UserID);
             }
             $this->notifyJoinGroup($GroupID, $UserID);
         }
+        return $results;
     }
 
     /**
@@ -1249,24 +1251,31 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function followGroup($group, $userID) {
+        $result = [];
         if(is_numeric($group) && $group > 0) {
             $group = $this->getByGroupID($group);
         }
 
         if($group->ChallengeID) {
-            $categoryModel = new CategoryModel();
+            // Remove existing UserCategory cache
+            // Before calculating the user-specific information on a category.
+            CategoryModel::clearUserCache($userID);
+            Gdn::cache()->remove("Follow_{$userID}");
+            $categoryModel = CategoryModel::instance();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
-            if($groupCategory->DisplayAs !== 'Discussions') {
-                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
-                $categoryIDs = array_column($categories, 'CategoryID');
-            } else {
-                $categoryIDs = [$groupCategory->CategoryID];
+            $parentCategoryID = val('CategoryID', $groupCategory);
+            $isFollowed = $categoryModel->follow($userID, $parentCategoryID, true);
+            $result[strval($parentCategoryID)] = $isFollowed;
+            $childrenCategories = CategoryModel::getChildren($parentCategoryID);
+            $categoryIDs = array_column($childrenCategories, 'CategoryID');
+            foreach($categoryIDs as $categoryID) {
+               $isFollowed = $categoryModel->follow($userID, $categoryID, true);
+                $result[strval($categoryID)] = $isFollowed;
             }
 
-            foreach($categoryIDs as $categoryID) {
-                $categoryModel->follow($userID, $categoryID, true);
-            }
+            CategoryModel::clearUserCache($userID);
         }
+        return $result;
     }
 
     /**
@@ -1281,16 +1290,14 @@ class GroupModel extends Gdn_Model {
         if($group->ChallengeID) {
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
-            if($groupCategory->DisplayAs !== 'Discussions') {
-                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
-                $categoryIDs = array_column($categories, 'CategoryID');
-            } else {
-                $categoryIDs = [$groupCategory->CategoryID];
-            }
+            $categories = CategoryModel::getSubtree($groupCategory->CategoryID, true);
+            $categoryIDs = array_column($categories, 'CategoryID');
 
             foreach($categoryIDs as $categoryID) {
                 $categoryModel->follow($userID, $categoryID, false);
             }
+
+            CategoryModel::clearUserCache($userID);
         }
     }
 
@@ -1299,21 +1306,30 @@ class GroupModel extends Gdn_Model {
      * @param $group
      */
     public function watchGroup($group, $userID) {
+        $results = [];
         if(is_numeric($group) && $group > 0) {
             $group = $this->getByGroupID($group);
         }
 
         if($group->ChallengeID) {
-            $categoryModel = new CategoryModel();
+            // Remove existing UserCategory cache
+            // Before calculating the user-specific information on a category.
+            CategoryModel::clearUserCache($userID);
+            Gdn::cache()->remove("UserMeta_{$userID}");
+
+            $categoryModel = CategoryModel::instance();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
-            if($groupCategory->DisplayAs !== 'Discussions') {
-                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, true);
-                $categoryIDs = array_column($categories, 'CategoryID');
-            } else {
-                $categoryIDs = [$groupCategory->CategoryID];
-            }
+            $parentCategoryID = val('CategoryID', $groupCategory);
+            $childrenCategories = CategoryModel::getChildren($parentCategoryID);
+            $categoryIDs = array_column($childrenCategories, 'CategoryID');
+            array_push($categoryIDs, $parentCategoryID);
             $categoryModel->setCategoryMetaData($categoryIDs, $userID, 1);
+            $userMetaModel = new UserMetaModel();
+            $results = $userMetaModel->getUserMeta($userID);
+            CategoryModel::clearUserCache($userID);
         }
+
+        return $results;
     }
 
     /**
@@ -1326,15 +1342,17 @@ class GroupModel extends Gdn_Model {
         }
 
         if($group->ChallengeID) {
+            CategoryModel::clearUserCache($userID);
+            Gdn::cache()->remove("UserMeta_{$userID}");
             $categoryModel = new CategoryModel();
             $groupCategory = $categoryModel->getByCode($group->ChallengeID);
-            if($groupCategory->DisplayAs !== 'Discussions') {
-                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, true);
-                $categoryIDs = array_column($categories, 'CategoryID');
-            } else {
-                $categoryIDs = [$groupCategory->CategoryID];
-            }
+            $parentCategoryID = val('CategoryID', $groupCategory);
+            $childrenCategories = CategoryModel::getChildren($parentCategoryID);
+            $categoryIDs = array_column($childrenCategories, 'CategoryID');
+            array_push($categoryIDs, $parentCategoryID);
             $categoryModel->setCategoryMetaData($categoryIDs, $userID, null);
+
+            CategoryModel::clearUserCache($userID);
         }
     }
 
