@@ -357,6 +357,11 @@ class GroupsPlugin extends Gdn_Plugin {
         }
         $dropdown = &$args['CategoryOptionsDropdown'];
         $category = &$args['Category'];
+
+        // FIX: Hide 'Mark Read' menu item
+        // https://github.com/topcoder-platform/forums/issues/125
+        $dropdown->removeItem('mark-read');
+
         if(val('DisplayAs', $category) == 'Discussions') {
             $categoryModel = new CategoryModel();
             $categoryID = val('CategoryID', $category);
