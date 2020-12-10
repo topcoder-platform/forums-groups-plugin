@@ -822,6 +822,9 @@ class GroupsPlugin extends Gdn_Plugin {
         return $sender->ControllerName == 'groupscontroller' && Gdn::request()->get('filter') == $requestMethod ? ' Active' : '';
     }
 
+    public static function logMessage($message, $data =[], $file = __FILE__, $line = __LINE__) {
+        logMessage($file, $line, 'GroupsPlugin', $message, json_encode($data) );
+    }
     public static function log($message, $data= []) {
         if (c('Debug')) {
             Logger::event(
