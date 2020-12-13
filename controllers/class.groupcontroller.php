@@ -176,6 +176,7 @@ class GroupController extends VanillaController {
      * @param int|bool $groupID
      */
     public function edit($groupID = false) {
+        Gdn_Theme::section('Group');
         $Group  = false;
         if($groupID) {
             $Group = $this->GroupModel->getByGroupID($groupID);
