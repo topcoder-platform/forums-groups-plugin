@@ -554,20 +554,26 @@ class GroupsPlugin extends Gdn_Plugin {
 
         $userMetaModel = new UserMetaModel();
         foreach ($categoryIDs as $categoryID) {
-            $newDiscussionKey = 'Preferences.%.NewDiscussion.' . $categoryID;
-            $newCommentKey = 'Preferences.%.NewComment.' . $categoryID;
-            $metaData= $userMetaModel->getUserMeta($userID, $newDiscussionKey);
-            foreach ($metaData as $key => $value) {
-                if($value != null) {
-                    return true;
-                }
+            $newEmailDiscussionKey = 'Preferences.Email.NewDiscussion.' . $categoryID;
+            $newEmailDiscussionValue = $userMetaModel->getUserMeta($userID, $newEmailDiscussionKey, false);
+            if($newEmailDiscussionValue && $newEmailDiscussionValue[$newEmailDiscussionKey] === 1) {
+                return true;
+            }
+            $newEmailCommentKey = 'Preferences.Email.NewComment.' . $categoryID;
+            $newEmailCommentValue = $userMetaModel->getUserMeta($userID, $newEmailCommentKey, false);
+            if($newEmailCommentValue && $newEmailCommentValue[$newEmailCommentKey] === 1) {
+                return true;
             }
 
-            $metaData= $userMetaModel->getUserMeta($userID, $newCommentKey);
-            foreach ($metaData as $key => $value) {
-                if($value != null) {
-                    return true;
-                }
+            $newPopupDiscussionKey = 'Preferences.Popup.NewDiscussion.' . $categoryID;
+            $newPopupDiscussionValue = $userMetaModel->getUserMeta($userID, $newPopupDiscussionKey, false);
+            if($newPopupDiscussionValue && $newPopupDiscussionValue[$newPopupDiscussionKey] ===1) {
+                return true;
+            }
+            $newPopupCommentKey = 'Preferences.Popup.NewComment.' . $categoryID;
+            $newPopupCommentValue = $userMetaModel->getUserMeta($userID, $newPopupCommentKey, false);
+            if($newPopupCommentValue && $newPopupCommentValue[$newPopupCommentKey]===1) {
+                return true;
             }
         }
         return false;
