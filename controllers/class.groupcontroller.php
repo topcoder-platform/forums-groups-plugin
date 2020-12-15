@@ -614,8 +614,8 @@ class GroupController extends VanillaController {
         $categoryIDs = [$Group->CategoryID];
         // Fix to segregate announcement conditions until announcement caching has been reworked.
         // See https://github.com/vanilla/vanilla/issues/7241
-
-        $countDiscussionsWhere = ['d.GroupID'=> $GroupID, 'Announce'=> [0,1]];
+        $categoryIDs = $this->GroupModel->getAllGroupCategoryIDs($Group->GroupID);
+        $countDiscussionsWhere = ['d.CategoryID' => $categoryIDs, 'Announce'=> [0,1]];
         // Get Discussion Count
         $CountDiscussions = $DiscussionModel->getCount($countDiscussionsWhere);
 
@@ -628,7 +628,8 @@ class GroupController extends VanillaController {
         $this->setData('CountDiscussions', $CountDiscussions);
 
         // Get Discussions
-        $where  = ['d.GroupID'=> $GroupID, 'Announce'=> 'all' ];
+
+        $where = ['d.CategoryID' => $categoryIDs, 'Announce'=> 'all' ];
         $this->DiscussionData = $DiscussionModel->get( $Offset, $Limit, $where);
         $this->setData('Discussions', $this->DiscussionData, true);
         $this->setJson('Loading', $Offset.' to '.$Limit);
