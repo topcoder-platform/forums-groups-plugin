@@ -556,23 +556,27 @@ class GroupsPlugin extends Gdn_Plugin {
         foreach ($categoryIDs as $categoryID) {
             $newEmailDiscussionKey = 'Preferences.Email.NewDiscussion.' . $categoryID;
             $newEmailDiscussionValue = $userMetaModel->getUserMeta($userID, $newEmailDiscussionKey, false);
-            if($newEmailDiscussionValue && $newEmailDiscussionValue[$newEmailDiscussionKey] === 1) {
+            // Values stored as text in UserMeta
+            if($newEmailDiscussionValue && $newEmailDiscussionValue[$newEmailDiscussionKey] == 1) {
                 return true;
             }
             $newEmailCommentKey = 'Preferences.Email.NewComment.' . $categoryID;
             $newEmailCommentValue = $userMetaModel->getUserMeta($userID, $newEmailCommentKey, false);
-            if($newEmailCommentValue && $newEmailCommentValue[$newEmailCommentKey] === 1) {
+            // Values stored as text in UserMeta
+            if($newEmailCommentValue && $newEmailCommentValue[$newEmailCommentKey] == 1) {
                 return true;
             }
 
             $newPopupDiscussionKey = 'Preferences.Popup.NewDiscussion.' . $categoryID;
             $newPopupDiscussionValue = $userMetaModel->getUserMeta($userID, $newPopupDiscussionKey, false);
-            if($newPopupDiscussionValue && $newPopupDiscussionValue[$newPopupDiscussionKey] ===1) {
+            // Values stored as text in UserMeta
+            if($newPopupDiscussionValue && $newPopupDiscussionValue[$newPopupDiscussionKey] == 1) {
                 return true;
             }
             $newPopupCommentKey = 'Preferences.Popup.NewComment.' . $categoryID;
             $newPopupCommentValue = $userMetaModel->getUserMeta($userID, $newPopupCommentKey, false);
-            if($newPopupCommentValue && $newPopupCommentValue[$newPopupCommentKey]===1) {
+            // Values stored as text in UserMeta
+            if($newPopupCommentValue && $newPopupCommentValue[$newPopupCommentKey] == 1) {
                 return true;
             }
         }
