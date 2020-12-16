@@ -907,10 +907,11 @@ class GroupModel extends Gdn_Model {
     private function unbookmarkGroupDiscussions($GroupID, $MemberID) {
         $this->SQL->update(
                 'UserDiscussion ud',
-                ['Bookmarked'=>0]
+                ['Bookmarked'=> 0]
             )->leftJoin('Discussion d', 'ud.DiscussionID = d.DiscussionID')
+             ->leftJoin('Category c', 'd.CategoryID = c.CategoryID')
              ->where('ud.UserID', $MemberID)
-             ->where('d.GroupID', $GroupID)->put();
+             ->where('c.GroupID', $GroupID)->put();
         // Update the user's bookmark count
         $discussionModel = new DiscussionModel();
         $discussionModel->setUserBookmarkCount($MemberID);
