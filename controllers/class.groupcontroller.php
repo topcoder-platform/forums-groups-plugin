@@ -201,7 +201,7 @@ class GroupController extends VanillaController {
 
         // Set Type dropbox
         if($Group->Type == GroupModel::TYPE_REGULAR || $groupID === false) { // Regular Groups can be created from UI only
-            $typesData = [GroupModel::TYPE_REGULAR => GroupModel::TYPE_REGULAR, GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
+            $typesData = [GroupModel::TYPE_REGULAR => GroupModel::TYPE_REGULAR];
         } else if ($Group->Type == GroupModel::TYPE_CHALLENGE){
             $typesData = [GroupModel::TYPE_CHALLENGE => GroupModel::TYPE_CHALLENGE];
         }
