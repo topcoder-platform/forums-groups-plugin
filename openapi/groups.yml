@@ -14,19 +14,29 @@ paths:
           type: string
         x-filter:
           field: ChallengeID
-      - description: |
-          Filter by group type.
+      - description: Filter by group type.
         in: query
         name: type
         schema:
           type: string
+          default: challenge
+          enum:
+            - challenge
+            - regular
+          x-filter:
+            field: Type
+      - description:  Filter by group privacy.
+        in: query
+        name: privacy
+        schema:
+          type: string
           default: public
           enum:
-          - public
-          - private
-          - secret
+            - public
+            - private
+            - secret
         x-filter:
-          field: Type
+          field: Privacy
       - $ref: '#/components/parameters/Page'
       - description: |
           Desired number of items per page.
@@ -128,6 +138,42 @@ paths:
         - Groups
       summary: Remove a user from a group.
   '/groups/{id}/members':
+    get:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - description: |
+            Page number. See [Pagination](https://docs.vanillaforums.com/apiv2/#pagination).
+          in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - description: Desired number of items per page.
+          in: query
+          name: limit
+          schema:
+            type: integer
+            default: 30
+            maximum: 100
+            minimum: 1
+      responses:
+        '200':
+          content:
+            'application/json':
+              schema:
+                items:
+                  $ref: '#/components/schemas/GroupMember'
+                type: array
+          description: Success
+      tags:
+        - Groups
+      summary: The list of group members.
     post:
       parameters:
         - description: The group ID.
@@ -279,4 +325,16 @@ components:
           type: boolean
       required:
         - userID
+      type: object
+    GroupMember:
+      properties:
+        userID:
+          description: The userID of an user.
+          type: integer
+        name:
+          description: The name of an user.
+          type: name
+      required:
+        - userID
+        - name
       type: object

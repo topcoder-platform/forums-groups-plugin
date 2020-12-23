@@ -203,6 +203,50 @@ class GroupsApiController extends AbstractApiController {
     }
 
     /**
+     * Get all members of a group.
+     *
+     * @param int $id The ID of the group.
+     * @throws NotFoundException if the group could not be found.
+     * @return array
+     */
+    public function get_members($id, array $query) {
+        $this->permission();
+        $in = $this->schema([
+            'page:i?' => [
+                'description' => 'Page number. See [Pagination](https://docs.vanillaforums.com/apiv2/#pagination).',
+                'default' => 1,
+                'minimum' => 1,
+            ],
+            'limit:i?' => [
+                'description' => 'Desired number of items per page.',
+                'default' => 30,
+                'minimum' => 1,
+                'maximum' => 100,
+            ]
+        ], 'in')->setDescription('The list of group members.');
+
+        $out = $this->schema([
+            ':a' => [
+                'userID:i', // The ID of the user.
+                'name:s', // The username of the user.
+            ],
+        ], 'out');
+
+        $group = $this->groupModel->getID($id, DATASET_TYPE_ARRAY);
+        if (!$group) {
+            throw new NotFoundException('Group');
+        }
+
+        $query = $in->validate($query);
+        list($offset, $limit) = offsetLimit("p{$query['page']}", $query['limit']);
+        $records =  $this->groupModel->getMembers($id, [], '',$limit, $offset );
+        $result = $out->validate($records);
+        $paging = ApiUtils::morePagerInfo($result, '/api/v2/groups/'.$id.'/members', $query, $in);
+
+        return new Data($result, ['paging' => $paging]);
+    }
+
+    /**
      * Archive a group.
      *
      * @param int $id The ID of the group.
