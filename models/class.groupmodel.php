@@ -836,7 +836,7 @@ class GroupModel extends Gdn_Model {
         }
         $this->followGroup($GroupID, $UserID, $followed);
         $this->watchGroup($GroupID, $UserID, $watched);
-
+        self::clearUserGroupCache($UserID);
     }
 
     /**
@@ -860,7 +860,7 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     * Returntur if user is a member of the group
+     * Return true if user is a member of the group
      *
      */
     public function isMemberOfGroup($userID, $groupID) {
@@ -882,6 +882,7 @@ class GroupModel extends Gdn_Model {
      * @throws Exception
      */
     public function setRole($GroupID, $MemberID, $Role){
+        self::clearUserGroupCache($MemberID);
         return $this->SQL->update('UserGroup')
             ->set('Role' , $Role)
             ->where('GroupID' , $GroupID)
@@ -897,10 +898,12 @@ class GroupModel extends Gdn_Model {
      * @return bool|Gdn_DataSet|object|string|void
      */
     public function removeMember($GroupID, $MemberID){
-        $result = $this->unbookmarkGroupDiscussions($GroupID, $MemberID);
+        $this->unbookmarkGroupDiscussions($GroupID, $MemberID);
         $this->unwatchGroup($GroupID, $MemberID);
         $this->unfollowGroup($GroupID, $MemberID);
-        return $this->SQL->delete('UserGroup', ['GroupID' => $GroupID, 'UserID' => $MemberID]);
+        $result = $this->SQL->delete('UserGroup', ['GroupID' => $GroupID, 'UserID' => $MemberID]);
+        self::clearUserGroupCache($MemberID);
+        return $result;
 
     }
 
@@ -1124,25 +1127,33 @@ class GroupModel extends Gdn_Model {
      * @return array|mixed|null
      */
     public function memberOf($userID){
-        $sql = $this->SQL;
-        $result = $sql->select('ug.Role, ug.GroupID')
-            ->from('UserGroup ug')
-            ->where('UserID', $userID)
-            ->get();
-        return $result->result();
+        $key = 'UserGroup_'.$userID;
+        $result = Gdn::cache()->get($key);
+        if ($result === Gdn_Cache::CACHEOP_FAILURE) {
+            $sql = clone $this->SQL;
+            $sql->reset();
+            $result = $sql->select('ug.Role, ug.GroupID')
+                ->from('UserGroup ug')
+                ->where('UserID', $userID)
+                ->get()->result();
+            Gdn::cache()->store($key, $result);
+            return $result;
+        } else {
+            return $result;
+        }
     }
 
     /**
      * Get a group role
      */
     public function getGroupRoleFor($userID, $groupID) {
-        $sql = $this->SQL;
-        $result = $sql->select('ug.Role')
-            ->from('UserGroup ug')
-            ->where('UserID', $userID)
-            ->where('GroupID', $groupID)
-            ->get()->firstRow();
-        return $result;
+        $groups = $this->memberOf($userID);
+        foreach ($groups as $group) {
+            if ($group->GroupID == $groupID) {
+                return $group;
+            }
+        }
+        return false;
     }
 
     /**
@@ -1856,5 +1867,19 @@ class GroupModel extends Gdn_Model {
         }
 
         return -1; //return Vanilla root
+    }
+
+    /**
+     * Clear the cached UserGroup data for a specific user.
+     *
+     * @param int|null $userID The user to clear. Use `null` for the current user.
+     */
+    public static function clearUserGroupCache($userID = null) {
+        if ($userID === null) {
+            $userID = Gdn::session()->UserID;
+        }
+
+        $key = 'UserGroup_'.$userID;
+        Gdn::cache()->remove($key);
     }
 }
