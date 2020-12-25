@@ -861,7 +861,9 @@ class GroupModel extends Gdn_Model {
 
     /**
      * Return true if user is a member of the group
-     *
+     * @param $userID
+     * @param $groupID
+     * @return bool
      */
     public function isMemberOfGroup($userID, $groupID) {
         $groups = $this->memberOf($userID);
@@ -1188,32 +1190,22 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     * Check if the current user has followed at least one group category
-     *
+     * Check if a user has followed at least one group category
+     * @param $group
+     * @param null $userID if userID is not set, the current user is used
+     * @return bool
      */
-    public function hasFollowedGroup($group) {
-        if($group->ChallengeID) {
-            $categoryModel = new CategoryModel();
-            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
-
-            if($groupCategory->DisplayAs !== 'Discussions') {
-                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
-                $categoryIDs = array_column($categories, 'CategoryID');
-            } else {
-                $categoryIDs = [$groupCategory->CategoryID];
-            }
-
-            $where['Followed'] = true;
-            $where['CategoryID'] = $categoryIDs;
-
-            $result = $categoryModel
-                ->getWhere($where)
-                ->resultArray();
-
-            return  count($result) > 0;
+    public function hasFollowedGroup($group, $userID = null) {
+        if(!$userID) {
+            $userID = Gdn::session()->UserID;
         }
 
-        return false;
+        $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
+        $categoryIDs = array_column($categories, 'CategoryID');
+        $result = Gdn::sql()->getWhere('UserCategory', ['UserID' => $userID, 'Followed' => 1, 'CategoryID' => $categoryIDs])
+            ->resultArray();
+
+        return  count($result) > 0;
     }
 
     /**
@@ -1230,26 +1222,19 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     * Check if the current user has watched at least one group category
+     * Check if an user has watched at least one group category
      * @param $group
+     * @param null $userID if userID is not set then the current user is used
      * @return bool User has watched at least one group category
      */
-    public function hasWatchedGroup($group) {
-        if($group->ChallengeID) {
-            $categoryModel = new CategoryModel();
-            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
-
-            if($groupCategory->DisplayAs !== 'Discussions') {
-                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, false);
-                $categoryIDs = array_column($categories, 'CategoryID');
-            } else {
-                $categoryIDs = [$groupCategory->CategoryID];
-            }
-
-           return $categoryModel->hasWatched($categoryIDs,Gdn::session()->UserID);
+    public function hasWatchedGroup($group, $userID = null) {
+        if(!$userID) {
+            $userID = Gdn::session()->UserID;
         }
-
-        return false;
+       $categoryModel = new CategoryModel();
+       $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
+       $categoryIDs = array_column($categories, 'CategoryID');
+       return $categoryModel->hasWatched($categoryIDs,$userID);
     }
 
     /**
@@ -1262,20 +1247,19 @@ class GroupModel extends Gdn_Model {
         if(is_numeric($group) && $group > 0) {
             $group = $this->getByGroupID($group);
         }
-        if($group->ChallengeID) {
-            $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
-            $categoryIDs = array_column($categories, 'CategoryID');
 
-            foreach($categoryIDs as $categoryID) {
-                $this->SQL->replace(
-                    'UserCategory',
-                    ['Followed' => (int)$followed],
-                    ['UserID' => $userID, 'CategoryID' => $categoryID]
-                );
-            }
-            CategoryModel::clearUserCache($userID);
-            Gdn::cache()->remove("Follow_{$userID}");
+        $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
+        $categoryIDs = array_column($categories, 'CategoryID');
+
+        foreach($categoryIDs as $categoryID) {
+            $this->SQL->replace(
+                'UserCategory',
+                ['Followed' => (int)$followed],
+                ['UserID' => $userID, 'CategoryID' => $categoryID]
+            );
         }
+        CategoryModel::clearUserCache($userID);
+        Gdn::cache()->remove("Follow_{$userID}");
     }
 
     /**
@@ -1298,33 +1282,32 @@ class GroupModel extends Gdn_Model {
             $group = $this->getByGroupID($group);
         }
 
-        if($group->ChallengeID) {
-            $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
-            $categoryIDs = array_column($categories, 'CategoryID');
-           // Don't use setCategoryMetaData due to cache
-            $metaKeys = ['Preferences.Email.NewComment.',
-                'Preferences.Email.NewDiscussion.',
-                'Preferences.Popup.NewComment.',
-                'Preferences.Popup.NewDiscussion.'];
-            foreach($categoryIDs as $categoryID) {
-                foreach ($metaKeys as $metaKey) {
-                     if($watched) {
-                        $this->SQL->replace(
-                            'UserMeta',
-                            [ 'Value' => (int)$watched],
-                            [ 'UserID' => $userID, 'Name' => $metaKey . $categoryID,]
-                        );
-                    } else {
-                        Gdn::sql()->delete('UserMeta', [
-                            'UserID' => $userID,
-                            'Name' => $metaKey . $categoryID
-                        ]);
-                    }
+        $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
+        $categoryIDs = array_column($categories, 'CategoryID');
+       // Don't use setCategoryMetaData due to cache
+        $metaKeys = ['Preferences.Email.NewComment.',
+            'Preferences.Email.NewDiscussion.',
+            'Preferences.Popup.NewComment.',
+            'Preferences.Popup.NewDiscussion.'];
+        foreach($categoryIDs as $categoryID) {
+            foreach ($metaKeys as $metaKey) {
+                 if($watched) {
+                    $this->SQL->replace(
+                        'UserMeta',
+                        [ 'Value' => (int)$watched],
+                        [ 'UserID' => $userID, 'Name' => $metaKey . $categoryID,]
+                    );
+                } else {
+                    Gdn::sql()->delete('UserMeta', [
+                        'UserID' => $userID,
+                        'Name' => $metaKey . $categoryID
+                    ]);
                 }
             }
-            CategoryModel::clearUserCache($userID);
-            Gdn::cache()->remove("UserMeta_{$userID}");
         }
+        CategoryModel::clearUserCache($userID);
+        Gdn::cache()->remove("UserMeta_{$userID}");
+
     }
 
     /**
