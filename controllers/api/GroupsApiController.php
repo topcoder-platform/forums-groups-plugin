@@ -21,14 +21,13 @@ class GroupsApiController extends AbstractApiController {
     /** @var CategoryModel */
     private $categoryModel;
 
-    /** @var Schema */
     private $groupSchema;
 
-    /** @var Schema */
     private $groupPostSchema;
 
-    /** @var Schema */
     private $groupMemberPostSchema;
+
+    private $groupMemberDetailsSchema;
     /**
      * GroupsApiController constructor.
      *
@@ -206,8 +205,10 @@ class GroupsApiController extends AbstractApiController {
      * Get all members of a group.
      *
      * @param int $id The ID of the group.
+     * @param array $query
+     * @return Data
+     * @throws ClientException
      * @throws NotFoundException if the group could not be found.
-     * @return array
      */
     public function get_members($id, array $query) {
         $this->permission();
@@ -255,6 +256,7 @@ class GroupsApiController extends AbstractApiController {
      * @return
      */
     public function put_archive($id, array $body) {
+        $this->permission('Groups.Group.Archive');
         $this->idParamSchema();
 
         $group = $this->groupModel->getByGroupID($id);
@@ -277,8 +279,7 @@ class GroupsApiController extends AbstractApiController {
      * @param int $userid The Vanilla User ID of the user
      * @throws NotFoundException if the group or user could not be found.
      */
-    public function delete_members($id, $userid) {
-
+    public function delete_member($id, $userid) {
         $this->idUserIdParamSchema()->setDescription('Remove a member from a group.');
         $this->schema([], 'out');
 
@@ -297,6 +298,78 @@ class GroupsApiController extends AbstractApiController {
        }
 
         $this->groupModel->removeMember($group->GroupID, $user->UserID);
+    }
+
+    /**
+     * Update follow/watch status for a member
+     *
+     * @param int $id The groupID of the group
+     * @param int $userid The Vanilla User ID of the user
+     * @throws NotFoundException if the group or user could not be found.
+     */
+    public function patch_member($id, $userid, array $body) {
+        $this->permission('Groups.Group.Edit');
+        $in = $this->groupMemberPatchSchema();
+        $user = Gdn::userModel()->getID($userid);
+        if(!$user) {
+            throw new NotFoundException('User');
+        }
+
+        $group = $this->groupModel->getByGroupID($id);
+        if(!$group) {
+            throw new NotFoundException('Group');
+        }
+
+        $isMember = $this->groupModel->isMemberOfGroup($user->UserID, $group->GroupID);
+        if(!$isMember) {
+            throw new ClientException('User is not a member of this group');
+        }
+
+        $body = $in->validate($body);
+        if(!array_key_exists('follow', $body) && !array_key_exists('watch', $body)) {
+            throw new ClientException('At least one parameter must be set');
+        }
+
+        if(array_key_exists('follow', $body)) {
+            $follow = $body['follow'];
+            $this->groupModel->followGroup($group, $user->UserID, $follow);
+        }
+        if(array_key_exists('watch', $body)) {
+            $watch = $body['watch'];
+            $this->groupModel->watchGroup($group, $user->UserID, $watch);
+        }
+    }
+
+    /**
+     * Get Member details
+     *
+     * @param int $id The groupID of the group
+     * @param int $userid The Vanilla User ID of the user
+     * @throws NotFoundException if the group or user could not be found.
+     */
+    public function get_member($id, $userid) {
+        $this->permission();
+        $user = Gdn::userModel()->getID($userid);
+        if(!$user) {
+            throw new NotFoundException('User');
+        }
+
+        $group = $this->groupModel->getByGroupID($id);
+        if(!$group) {
+            throw new NotFoundException('Group');
+        }
+
+        $isMember = $this->groupModel->isMemberOfGroup($user->UserID, $group->GroupID);
+        if(!$isMember) {
+            throw new ClientException('User is not a member of this group');
+        }
+
+        $hasFollowed = $this->groupModel->hasFollowedGroup($group, $user->UserID);
+        $hasWatched = $this->groupModel->hasWatchedGroup($group, $user->UserID);
+        $record = ['userID' => $user->UserID, 'follow' => $hasFollowed, 'watch' => $hasWatched];
+        $out = $this->schema($this->groupMemberDetailsSchema('out'));
+        $result = $out->validate($record);
+        return $result;
     }
 
     /**
@@ -320,7 +393,40 @@ class GroupsApiController extends AbstractApiController {
      }
 
     /**
-     * Get a GroupID/UserID -only conversation record schema.
+     * Get a Member Details schema.
+     *
+     * @param string $type The type of schema.
+     * @return Schema Returns a schema object.
+     */
+    public function groupMemberDetailsSchema($type) {
+        if ($this->groupMemberDetailsSchema === null) {
+            $this->groupMemberDetailsSchema = $this->schema(
+                Schema::parse([
+                    'userID:i' => 'The userID.',
+                    'watch:b' => 'Watch status',
+                    'follow:b' => 'Follow status',
+                ]),
+                'GroupMemberDetails'
+            );
+        }
+        return $this->schema($this->groupMemberDetailsSchema, $type);
+    }
+
+    /**
+     * Get Group Member Patch schema.
+     *
+     * @param string $type The type of schema.
+     * @return Schema Returns a schema object.
+     */
+    public function groupMemberPatchSchema() {
+        return $this->schema(
+                ['watch:b?' => 'Watch status',
+                    'follow:b?' => 'Follow status',
+                ], 'in');
+    }
+
+    /**
+     * Get a GroupID/UserID - only conversation record schema.
      *
      * @return Schema Returns a schema object.
      */

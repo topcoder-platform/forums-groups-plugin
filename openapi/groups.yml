@@ -116,7 +116,57 @@ paths:
                $ref: '#/components/schemas/GroupPatch'
          required: true
        summary: Update a group.
-  '/groups/{id}/members/{userid}':
+  '/groups/{id}/member/{userid}':
+    get:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - description: The user ID.
+          in: path
+          name: userid
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          content:
+            'application/json':
+              schema:
+                $ref: '#/components/schemas/GroupMemberDetails'
+          description: Success
+      tags:
+        - Groups
+      summary: Get a member details.
+    patch:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+        - description: The user ID.
+          in: path
+          name: userid
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Success
+      tags:
+        - Groups
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GroupMemberPatch'
+        required: true
+      summary: Update watch/follow status for a member.
     delete:
       parameters:
         - description: The group ID.
@@ -326,6 +376,16 @@ components:
       required:
         - userID
       type: object
+    GroupMemberPatch:
+      description: Update follow/watch status for a member
+      properties:
+        watch:
+          description: Watch/unwatch all group categories
+          type: boolean
+        follow:
+          description: Follow/unfollow all group categories
+          type: boolean
+      type: object
     GroupMember:
       properties:
         userID:
@@ -337,4 +397,20 @@ components:
       required:
         - userID
         - name
+      type: object
+    GroupMemberDetails:
+      properties:
+        userID:
+          description: The userID of an user.
+          type: integer
+        watch:
+          description: Watch status
+          type: boolean
+        follow:
+          description: Follow status
+          type: boolean
+      required:
+        - userID
+        - follow
+        - watch
       type: object
