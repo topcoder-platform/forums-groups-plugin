@@ -358,6 +358,12 @@ class GroupsApiController extends AbstractApiController {
         if(!$group) {
             throw new NotFoundException('Group');
         }
+
+        $isMember = $this->groupModel->isMemberOfGroup($user->UserID, $group->GroupID);
+        if(!$isMember) {
+            throw new ClientException('User is not a member of this group');
+        }
+
         $hasFollowed = $this->groupModel->hasFollowedGroup($group, $user->UserID);
         $hasWatched = $this->groupModel->hasWatchedGroup($group, $user->UserID);
         $record = ['userID' => $user->UserID, 'follow' => $hasFollowed, 'watch' => $hasWatched];
