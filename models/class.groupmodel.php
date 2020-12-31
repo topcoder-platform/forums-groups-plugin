@@ -859,7 +859,7 @@ class GroupModel extends Gdn_Model {
         $this->watchGroup($GroupID, $UserID, $watched);
         self::clearUserGroupCache($UserID);
         $discussionModel = new DiscussionModel();
-        $discussionModel->updateUserDiscussionCount($UserID, true);
+        $discussionModel->updateUserDiscussionCount($UserID, false);
     }
 
     /**
@@ -929,7 +929,7 @@ class GroupModel extends Gdn_Model {
         $result = $this->SQL->delete('UserGroup', ['GroupID' => $GroupID, 'UserID' => $MemberID]);
         self::clearUserGroupCache($MemberID);
         $discussionModel = new DiscussionModel();
-        $discussionModel->updateUserDiscussionCount($MemberID, true);
+        $discussionModel->updateUserDiscussionCount($MemberID, false);
         return $result;
 
     }
