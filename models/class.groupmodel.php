@@ -796,26 +796,47 @@ class GroupModel extends Gdn_Model {
         return $data === false ? 0 : $data->Count;
     }
 
+
+    /**
+     * Checks the user's permissions for the specified permission.
+     *
+     * Returns a boolean value indicating if the action is permitted.
+     *
+     * @param $userID
+     * @param $groupID
+     * @param null $categoryID
+     * @param null $permissionCategoryID
+     * @param null $permissions
+     * @param bool $fullMatch If $Permission is an array, $FullMatch indicates if all permissions specified are required.
+     * If false, the user only needs one of the specified permissions.
+     * @return boolean Returns **true** if the user has permission or **false** otherwise.
+     */
     public function checkPermission($userID,$groupID,$categoryID = null, $permissionCategoryID = null, $permissions = null, $fullMatch = true){
+        if($userID === Gdn::session()->UserID) {
+            $userPermissions = Gdn::session()->getPermissions();
+        } else {
+            $userPermissions = Gdn::userModel()->getPermissions($userID);
+        }
+
         // Check access to a category
         $result = false;
         if($this->isMemberOfGroup($userID,$groupID)) {
             if ($permissions == null) {
                 $result = true;
             } else {
-                $result = Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $permissionCategoryID)
-                    || Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $categoryID);
+                $result = PermissionModel::checkPermission($userPermissions,$permissions, $fullMatch, 'Category', $permissionCategoryID)
+                    || PermissionModel::checkPermission($userPermissions,$permissions, $fullMatch, 'Category', $categoryID);
             }
         } else {
             // User is not a group member, checking admin group permissions
-            if ( GDN::session()->checkPermission([
+            if (PermissionModel::checkPermission($userPermissions,[
                     GroupsPlugin::GROUPS_GROUP_ADD_PERMISSION,
                     GroupsPlugin::GROUPS_CATEGORY_MANAGE_PERMISSION,
                     GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION,
                     GroupsPlugin::GROUPS_EMAIL_INVITATIONS_PERMISSION
                 ], false)) {
-                $result =  Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $permissionCategoryID)
-                    || Gdn::session()->checkPermission($permissions, $fullMatch, 'Category', $categoryID);;
+                $result = PermissionModel::checkPermission($userPermissions,$permissions, $fullMatch, 'Category', $permissionCategoryID) ||
+                PermissionModel::checkPermission($userPermissions, $permissions, $fullMatch, 'Category', $categoryID);
             }
         }
         return $result;
@@ -837,6 +858,8 @@ class GroupModel extends Gdn_Model {
         $this->followGroup($GroupID, $UserID, $followed);
         $this->watchGroup($GroupID, $UserID, $watched);
         self::clearUserGroupCache($UserID);
+        $discussionModel = new DiscussionModel();
+        $discussionModel->updateUserDiscussionCount($UserID, true);
     }
 
     /**
@@ -905,6 +928,8 @@ class GroupModel extends Gdn_Model {
         $this->unfollowGroup($GroupID, $MemberID);
         $result = $this->SQL->delete('UserGroup', ['GroupID' => $GroupID, 'UserID' => $MemberID]);
         self::clearUserGroupCache($MemberID);
+        $discussionModel = new DiscussionModel();
+        $discussionModel->updateUserDiscussionCount($MemberID, true);
         return $result;
 
     }
