@@ -625,16 +625,16 @@ class GroupsPlugin extends Gdn_Plugin {
             $data["Story"] =
                 '<p>You are watching the category "' . $categoryName . '", ' .
                 'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<p/>' .
-                '<span>----------------------------------------------------------------------------</span>' .
-                '<p>' .
-                $groupLink .
-                '<span>Discussion: ' . $discussion['Name'] . '</span><br/>' .
-                '<span>Author: ' . $author->Name . '</span><br/>' .
-                '<span>Category: ' . implode('›', $categoryBreadcrumbs) . '</span><br/>' .
-                '<span>Message:</span>' . $message .
-                $this->formatMediaData($mediaData) .
-                '</p><br/>'.
-                '<span>----------------------------------------------------------------------------</span>';
+                '<hr/>' .
+                '<div style="padding: 0; margin: 0">'.
+                '<p>' . $groupLink .'</p>'.
+                '<p><span>Discussion: ' . $discussion['Name'] . '</p>' .
+                '<p><span>Author: ' . $author->Name . '</p>' .
+                '<p><span>Category: ' . implode('›', $categoryBreadcrumbs) . '</p>' .
+                '<p><span>Message:</span> ' . $message .'</p>'.
+                '<p>'.$this->formatMediaData($mediaData) .'</p>'.
+                '</div>'.
+                '<hr/>';
         }
     }
 
@@ -681,13 +681,12 @@ class GroupsPlugin extends Gdn_Plugin {
             $data["Story"] =
                 '<p>You are watching the discussion "' . $discussionName . '" in the category "' .$categoryName.'" '.
                 'which was updated ' . $commentDateInserted . ' by ' . $commentAuthor->Name . ':</p>' .
-                '<span>----------------------------------------------------------------------------</span>' .
-                '<p>'.$groupLink.
-                    '<span>Message:</span>'.
-                '</p>' .
+                '<hr/>' .
+                '<p class="label">'.$groupLink.'</p>'.
+                '<p class="label"><span style="display: block">Message:</span>'.'</p>' .
                  $commentStory .
                 $this->formatMediaData($mediaData).
-                '<br/><span>----------------------------------------------------------------------------</span>';
+                '<br/><hr/>';
             $parentCommentID = (int)$comment['ParentCommentID'];
             if($parentCommentID > 0) {
                 $commentModel = new CommentModel();
@@ -695,11 +694,11 @@ class GroupsPlugin extends Gdn_Plugin {
                 $parentCommentAuthor = $userModel->getID($parentComment['InsertUserID']);
                 $parentCommentStory = condense(Gdn_Format::to($parentComment['Body'], $parentComment['Format']));
                 $data['Story'] .=
-                    '<p>Original Message (by '.$parentCommentAuthor->Name.' ):</p>'.
+                    '<p class="label">Original Message (by '.$parentCommentAuthor->Name.' ):</p>'.
                     '<p>' .
                         $parentCommentStory.
                     '</p>' .
-                    '<span>----------------------------------------------------------------------------</span>';
+                    '<hr/>';
             }
         }
     }
