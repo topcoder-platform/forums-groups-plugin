@@ -260,15 +260,14 @@ class GroupsPlugin extends Gdn_Plugin {
         $Discussion = $sender->data('Discussion');
         if($Discussion) {
             $groupModel = new GroupModel();
-            $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
-            $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
             $groupID = $groupModel->findGroupIDFromDiscussion($Discussion);
-            self::log('discussionController_render_before:GroupID='.$groupID, []);
-            $Group = $groupModel->getByGroupID($groupID);
-            if (!$groupModel->canView($Group)) {
-                throw permissionException();
+            if($groupID) {
+                $Group = $groupModel->getByGroupID($groupID);
+                if (!$groupModel->canView($Group)) {
+                    throw permissionException();
+                }
+                $sender->setData('Group', $Group);
             }
-            $sender->setData('Group', $Group);
         }
 
     }
