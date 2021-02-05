@@ -59,9 +59,9 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $canInviteMember = $groupModel->canInviteNewMember($group);
         $canManageMembers = $groupModel->canManageMembers($group);
         $canManageCategories = $groupModel->canManageCategories($group);
-        $canFollow = $groupModel->canFollowGroup($group);
+        $canFollow = boolval(c('Vanilla.EnableCategoryFollowing')) && $groupModel->canFollowGroup($group);
         $canWatch = $groupModel->canWatchGroup($group);
-        $hasFollowed = $groupModel->hasFollowedGroup($group);
+        $hasFollowed = boolval(c('Vanilla.EnableCategoryFollowing')) && $groupModel->hasFollowedGroup($group);
         $hasWatched = $groupModel->hasWatchedGroup($group);
         $dropdown
             ->addLinkIf($canEdit, t('Edit'), '/group/edit/'.$groupID, 'edit')
