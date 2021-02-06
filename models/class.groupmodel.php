@@ -1269,22 +1269,24 @@ class GroupModel extends Gdn_Model {
      * @param bool $followed
      */
     public function followGroup($group, $userID, $followed = true ) {
-        if(is_numeric($group) && $group > 0) {
-            $group = $this->getByGroupID($group);
-        }
+        if(boolval(c('Vanilla.EnableCategoryFollowing'))) {
+            if (is_numeric($group) && $group > 0) {
+                $group = $this->getByGroupID($group);
+            }
 
-        $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
-        $categoryIDs = array_column($categories, 'CategoryID');
+            $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID, 'DisplayAs' => 'Discussions'])->resultArray();
+            $categoryIDs = array_column($categories, 'CategoryID');
 
-        foreach($categoryIDs as $categoryID) {
-            $this->SQL->replace(
-                'UserCategory',
-                ['Followed' => (int)$followed],
-                ['UserID' => $userID, 'CategoryID' => $categoryID]
-            );
+            foreach ($categoryIDs as $categoryID) {
+                $this->SQL->replace(
+                    'UserCategory',
+                    ['Followed' => (int)$followed],
+                    ['UserID' => $userID, 'CategoryID' => $categoryID]
+                );
+            }
+            CategoryModel::clearUserCache($userID);
+            Gdn::cache()->remove("Follow_{$userID}");
         }
-        CategoryModel::clearUserCache($userID);
-        Gdn::cache()->remove("Follow_{$userID}");
     }
 
     /**
