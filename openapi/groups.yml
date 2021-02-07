@@ -166,7 +166,7 @@ paths:
             schema:
               $ref: '#/components/schemas/GroupMemberPatch'
         required: true
-      summary: Update watch/follow status for a member.
+      summary: Update watch status for a member.
     delete:
       parameters:
         - description: The group ID.
@@ -370,20 +370,14 @@ components:
         watch:
           description: Watch all group categories
           type: boolean
-        follow:
-          description: Follow all group categories
-          type: boolean
       required:
         - userID
       type: object
     GroupMemberPatch:
-      description: Update follow/watch status for a member
+      description: Update watch status for a member
       properties:
         watch:
           description: Watch/unwatch all group categories
-          type: boolean
-        follow:
-          description: Follow/unfollow all group categories
           type: boolean
       type: object
     GroupMember:
@@ -406,11 +400,7 @@ components:
         watch:
           description: Watch status
           type: boolean
-        follow:
-          description: Follow status
-          type: boolean
       required:
         - userID
-        - follow
         - watch
       type: object
