@@ -197,8 +197,7 @@ class GroupsApiController extends AbstractApiController {
         }
 
         $watch = $body['watch'];
-        $follow = $body['follow'];
-        $this->groupModel->join($group->GroupID, $user->UserID, $watch, $follow);
+        $this->groupModel->join($group->GroupID, $user->UserID, $watch);
     }
 
     /**
@@ -301,7 +300,7 @@ class GroupsApiController extends AbstractApiController {
     }
 
     /**
-     * Update follow/watch status for a member
+     * Update watch status for a member
      *
      * @param int $id The groupID of the group
      * @param int $userid The Vanilla User ID of the user
@@ -326,14 +325,10 @@ class GroupsApiController extends AbstractApiController {
         }
 
         $body = $in->validate($body);
-        if(!array_key_exists('follow', $body) && !array_key_exists('watch', $body)) {
+        if(!array_key_exists('watch', $body)) {
             throw new ClientException('At least one parameter must be set');
         }
 
-        if(array_key_exists('follow', $body)) {
-            $follow = $body['follow'];
-            $this->groupModel->followGroup($group, $user->UserID, $follow);
-        }
         if(array_key_exists('watch', $body)) {
             $watch = $body['watch'];
             $this->groupModel->watchGroup($group, $user->UserID, $watch);
@@ -364,9 +359,8 @@ class GroupsApiController extends AbstractApiController {
             throw new ClientException('User is not a member of this group');
         }
 
-        $hasFollowed = $this->groupModel->hasFollowedGroup($group, $user->UserID);
         $hasWatched = $this->groupModel->hasWatchedGroup($group, $user->UserID);
-        $record = ['userID' => $user->UserID, 'follow' => $hasFollowed, 'watch' => $hasWatched];
+        $record = ['userID' => $user->UserID, 'watch' => $hasWatched];
         $out = $this->schema($this->groupMemberDetailsSchema('out'));
         $result = $out->validate($record);
         return $result;
@@ -383,8 +377,7 @@ class GroupsApiController extends AbstractApiController {
             $this->groupMemberPostSchema = $this->schema(
                 Schema::parse([
                     'userID:i?' => 'The userID.',
-                    'watch:b?' => 'Watch all group categories',
-                    'follow:b?' => 'Follow all group categories',
+                    'watch:b?' => 'Watch all group categories'
                 ]),
                 'GroupMemberPost'
             );
@@ -403,8 +396,7 @@ class GroupsApiController extends AbstractApiController {
             $this->groupMemberDetailsSchema = $this->schema(
                 Schema::parse([
                     'userID:i' => 'The userID.',
-                    'watch:b' => 'Watch status',
-                    'follow:b' => 'Follow status',
+                    'watch:b' => 'Watch status'
                 ]),
                 'GroupMemberDetails'
             );
@@ -420,9 +412,7 @@ class GroupsApiController extends AbstractApiController {
      */
     public function groupMemberPatchSchema() {
         return $this->schema(
-                ['watch:b?' => 'Watch status',
-                    'follow:b?' => 'Follow status',
-                ], 'in');
+                ['watch:b' => 'Watch status'], 'in');
     }
 
     /**
