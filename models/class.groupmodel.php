@@ -1737,12 +1737,14 @@ class GroupModel extends Gdn_Model {
         }
 
         $groupID = $this->findGroupIDFromDiscussion($discussion);
-        $group = $this->getByGroupID($groupID);
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
+        if($groupID) {
+            $group = $this->getByGroupID($groupID);
+            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+            $groupRole = val('Role', $result, null);
+            if ($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
+                || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+                return true;
+            }
         }
         return false;
     }

@@ -333,6 +333,9 @@ class GroupsPlugin extends Gdn_Plugin {
 
             if ($canMove === false) {
                 $options->removeItem('move');
+            } else {
+                // User doesn't have Vanilla Moderation permission but can moderate group discussions
+                $options->addLink(t('Move'), '/moderation/confirmdiscussionmoves?discussionid='.$Discussion->DiscussionID, 'move', 'MoveDiscussion Popup');
             }
 
             if ($canRefetch === false) {
