@@ -194,7 +194,7 @@ class GroupsPlugin extends Gdn_Plugin {
 
                 $group = $groupModel->getByGroupID($groupID);
                 $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
-                echo '<div class="Meta Meta-Discussion Group-Info">'.
+                echo '<div class="Meta Meta-Discussion-Group Group-Info">'.
                         '<span class="MItem ">'.
                             '<span class="label">'.$type.':&nbsp;</span>'.
                             '<span class="value">'.anchor($group->Name, $url).'</span>'.
@@ -333,6 +333,9 @@ class GroupsPlugin extends Gdn_Plugin {
 
             if ($canMove === false) {
                 $options->removeItem('move');
+            } else {
+                // User doesn't have Vanilla Moderation permission but can moderate group discussions
+                $options->addLink(t('Move'), '/moderation/confirmdiscussionmoves?discussionid='.$Discussion->DiscussionID, 'move', 'MoveDiscussion Popup');
             }
 
             if ($canRefetch === false) {

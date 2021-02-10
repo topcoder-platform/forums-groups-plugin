@@ -1728,11 +1728,24 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     *  Check move group discusion permission
+     *  Check move group discussion permission
      *
      */
     public function canMoveDiscussion($discussion) {
-        // Don't move any discussions
+        if ($this->canEditDiscussion($discussion) && Gdn::session()->checkPermission('Garden.Moderation.Manage')) {
+            return true;
+        }
+
+        $groupID = $this->findGroupIDFromDiscussion($discussion);
+        if($groupID) {
+            $group = $this->getByGroupID($groupID);
+            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
+            $groupRole = val('Role', $result, null);
+            if ($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
+                || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+                return true;
+            }
+        }
         return false;
     }
 
