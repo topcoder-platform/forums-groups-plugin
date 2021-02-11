@@ -34,7 +34,7 @@ class GroupsPlugin extends Gdn_Plugin {
     const ROLE_TOPCODER_MANAGER = 'Connect Manager';
 
     const UI = [
-        'challenge' => ['BreadcrumbLevel1Title' => 'Challenges',
+        'challenge' => ['BreadcrumbLevel1Title' => 'Challenge Discussions',
             'BreadcrumbLevel1Url' =>  self::ROUTE_CHALLENGE_GROUPS,
             'CreateGroupTitle' => 'Create Challenge',
             'EditGroupTitle' => 'Edit Challenge',
@@ -349,7 +349,7 @@ class GroupsPlugin extends Gdn_Plugin {
         }
     }
 
-    public function base_afterDiscussionFilters_handler($sender){
+    public function base_beforeUserLinksDiscussionFilters_handler($sender){
         $this->addGroupLinkToMenu($sender);
     }
 
@@ -819,8 +819,8 @@ class GroupsPlugin extends Gdn_Plugin {
     private function addGroupLinkToMenu($sender) {
         if(Gdn::session()->isValid()) {
 
-            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenges', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
-            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Groups', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
+            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenge Discussions', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
+           // echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Groups', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
            // echo '<li class="'.$this->getMenuItemCssClassFromRequestMethod($sender, 'mine').'">'. anchor('My Challenges & Groups', GroupsPlugin::ROUTE_MY_GROUPS).'</li>';
         }
     }

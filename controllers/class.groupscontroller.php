@@ -39,7 +39,7 @@ class GroupsController extends VanillaController {
         // Add modules
         $this->addModule('NewDiscussionModule');
         $this->addModule('DiscussionFilterModule');
-        $this->addModule('CategoriesModule');
+        //$this->addModule('CategoriesModule');
         $this->addModule('BookmarkedModule');
         $this->fireEvent('AfterInitialize');
     }
@@ -47,7 +47,7 @@ class GroupsController extends VanillaController {
     public function setFilterPageData($filter) {
         if($filter == 'challenge') {
             $this->View = 'index';
-            $this->title('Challenges');
+            $this->title('Challenge Discussions');
             $this->setData('Title', 'My Challenges');
             $this->setData('ShowAddButton', false);
             $this->setData('AddButtonTitle', 'Challenge');
@@ -59,7 +59,7 @@ class GroupsController extends VanillaController {
             $this->setData('AllGroupButtonLink', '/groups/all/?filter=challenge');
             $this->setData('NoGroups', 'No challenges were found.');
             $this->setData('Breadcrumbs', [
-                ['Name' => 'Challenges', 'Url' => GroupsPlugin::ROUTE_CHALLENGE_GROUPS]]);
+                ['Name' => 'Challenge Discussions', 'Url' => GroupsPlugin::ROUTE_CHALLENGE_GROUPS]]);
         } else if($filter == 'regular' ) {
             $this->View = 'index';
             $this->title('Groups');
