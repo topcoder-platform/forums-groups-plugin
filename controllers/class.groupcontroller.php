@@ -51,7 +51,7 @@ class GroupController extends VanillaController {
         // Add modules
         $this->addModule('NewDiscussionModule');
         $this->addModule('DiscussionFilterModule');
-        $this->addModule('CategoriesModule');
+        //$this->addModule('CategoriesModule');
         $this->addModule('BookmarkedModule');
     }
 
@@ -573,7 +573,7 @@ class GroupController extends VanillaController {
 
         $Group = $this->GroupModel->getByGroupID($GroupID);
         $this->setData('Group',$Group);
-        $this->setData('Breadcrumbs', [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs', [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('Discussions')]]);
 
         // Check for the feed keyword.
@@ -683,7 +683,7 @@ class GroupController extends VanillaController {
         }
 
         $this->setData('Breadcrumbs',
-            [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+            [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
                 ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Announcement')]]);
         $this->title('New Announcement');
         $this->setDiscussionData($Group, 2);
@@ -703,7 +703,7 @@ class GroupController extends VanillaController {
             throw permissionException();
         }
 
-        $this->setData('Breadcrumbs',   [['Name' => t('Challenges'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs',   [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Discussion')]]);
         $this->title('New Discussion');
         $this->setDiscussionData($Group, 1);
