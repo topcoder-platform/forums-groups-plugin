@@ -9,10 +9,8 @@ $Members = $this->data('Members');
 
 ?>
 <?php echo writeGroupHeader($Group);?>
+<h1 class="H">Leaders</h1>
 <div class="media-list-container Group-Box MemberList">
-    <div class="PageControls">
-        <h2 class="H media-list-heading">Leaders</h2>
-    </div>
     <?php if(count($Leaders) > 0 ) {?>
         <ul class="media-list DataList">
             <?php echo writeGroupMembersWithDetails($Leaders, $Group); ?>
@@ -21,9 +19,9 @@ $Members = $this->data('Members');
         echo '<div class="EmptyMessage">There are no leaders.</div>';
     }?>
 </div>
+<h1 class="H">Members</h1>
 <div class="media-list-container Group-Box MemberList">
     <div class="PageControls">
-        <h2 class="H media-list-heading">Members</h2>
         <?php
         $PagerOptions = ['Wrapper' => '<span class="PagerNub">&#160;</span><div %1$s>%2$s</div>', 'RecordCount' => $this->data('CountMembers'), 'CurrentRecords' => $Members];
         if ($this->data('_PagerUrl')) {

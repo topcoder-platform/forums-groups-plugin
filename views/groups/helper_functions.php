@@ -76,64 +76,29 @@ if (!function_exists('writeGroup')) {
         ?>
         <li id="Group_<?php echo $group->GroupID; ?>" class="<?php echo $cssClass.' '.$wrapCssClass; ?> ">
             <?php
-            echo writeGroupIconWrap($group, 'PhotoWrap','ProfilePhoto ProfilePhotoMedium Group-Icon');
+
             if (!property_exists($sender, 'CanEditGroups')) {
                 // $sender->CanEditGroups = val('PermsDiscussionsEdit', CategoryModel::categories($discussion->CategoryID)) && c('Vanilla.AdminCheckboxes.Use');
             }
             ?>
-            <span class="Options">
-                <div class="Buttons">
-                  <?php
-                    if($group->Privacy == GroupModel::PRIVACY_PUBLIC && hasJoinedGroup($group->GroupID) == null) {
-                        echo anchor('Join', '/group/join/' . $group->GroupID, 'Button Popup', '');
-                    }
-
-                    if(hasJoinedGroup($group->GroupID) === GroupModel::ROLE_LEADER) {
-                        echo anchor('Invite', '/group/invite/' . $group->GroupID, 'Button Popup', '');
-                    }
-                  ?>
-                  </div>
-                  <?php
-                   // echo optionsList($group);
-                  ?>
-            </span>
-
             <div class="ItemContent Group">
-                <div class="Title" role="heading" aria-level="3">
-                    <?php echo anchor($groupName, $groupUrl); ?>
+                <div class="Options">
+                    <?php echo getGroupOptionsDropdown($group);?>
+                </div>
+                <?php
+                 echo writeGroupIconWrap($group, 'Item-Icon PhotoWrap PhotoWrap-Category','GroupPhoto');
+                 ?>
+                <div class="Title" role="heading" class="TitleWrap">
+                    <?php echo anchor($groupName, $groupUrl, 'Title'); ?>
                 </div>
                 <div class="Description">
                     <?php echo $groupDesc;  ?>
-                 </div>
+                </div>
             </div>
         </li>
     <?php
     }
 
-}
-
-if(!function_exists('writeGroupSection1')) {
-
-    function writeGroupSection1($Groups, $sender, $sectionTitle, $noDataText, $moreDataText, $moreDataLink){
-        echo '<div class="media-list-container Group-Box my-groups">';
-        echo '<div class="">';
-        echo '<h2 class="H HomepageTitle">'.$sectionTitle.'</h2>';
-        echo '</div>';
-
-        if ($Groups->numRows() > 0 ) {
-            ?>
-            <ul class="media-list DataList">
-                <?php echo writeGroups($Groups, $sender); ?>
-            </ul>
-            <div class="MoreWrap"> <?php echo anchor($moreDataText, $moreDataLink, 'MoreWrap');?></div>
-            <?php
-        } else {
-            ?>
-            <div class="Empty"><?php echo $noDataText; ?></div>
-            <?php
-        }
-        echo '</div>';
-    }
 }
 
 if(!function_exists('buildGroupPagerOptions')) {
@@ -148,11 +113,6 @@ if(!function_exists('buildGroupPagerOptions')) {
 if(!function_exists('writeGroupSection')) {
 
     function writeGroupSection($Groups, $Pager = null, $sectionTitle, $noDataText, $moreDataText, $moreDataLink, $sender){
-        echo '<div class="media-list-container Group-Box my-groups">';
-        echo '<div class="">';
-        echo '<h2 class="H HomepageTitle">'.$sectionTitle.'</h2>';
-        echo '</div>';
-
         if($Pager) {
             $PagerOptions = buildGroupPagerOptions($Groups, $Pager);
             PagerModule::current($Pager);
@@ -166,7 +126,7 @@ if(!function_exists('writeGroupSection')) {
                 echo '</div>';
             }
             ?>
-            <ul class="media-list DataList">
+            <ul class="DataList GroupList">
                 <?php echo writeGroups($Groups, $sender); ?>
             </ul>
             <?php
@@ -185,6 +145,5 @@ if(!function_exists('writeGroupSection')) {
             <div class="Empty"><?php echo $noDataText; ?></div>
             <?php
         }
-        echo '</div>';
     }
 }

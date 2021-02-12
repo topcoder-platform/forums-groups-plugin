@@ -521,10 +521,6 @@ li.ui-timepicker-selected .ui-timepicker-duration,
     clear: both
 }
 
-.Groups .DataList .ItemContent {
-    padding-left: 48px
-}
-
 .Groups .Item .OptionsMenu,
 .Groups .Item .ButtonGroup {
     display: inline-block;
@@ -589,19 +585,7 @@ li.ui-timepicker-selected .ui-timepicker-duration,
     margin-bottom: 20px
 }
 
-.Group-Header:after {
-    content: "";
-    display: table;
-    clear: both
-}
 
-.Group-Header .MItem {
-    display: inline-block
-}
-
-.Group-Header .Meta {
-    font-size: 12px
-}
 
 .Group-Header .OptionsMenu {
     display: block;
@@ -679,19 +663,8 @@ li.ui-timepicker-selected .ui-timepicker-duration,
     margin-left: 0
 }
 
-.Group-Title {
-    margin-bottom: 10px;
-    font-size: 36px;
-    line-height: 1
-}
-
 .NoBanner .Group-Title {
     padding-top: 5px
-}
-
-.Group-Description {
-    line-height: 1.4;
-    padding: 5px 0
 }
 
 .Group-Banner {

@@ -195,42 +195,52 @@ if (!function_exists('writeGroupHeader')) {
         $bannerCssClass = $group->Banner ? 'HasBanner':'NoBanner';
      ?>
         <div class="Group-Header <?php echo $bannerCssClass; ?>">
+            <div class="GroupOptions OptionsMenu ButtonGroup">
+                <?php echo getGroupOptionsDropdown();?>
+            </div>
+            <h1 class="Group-Title"><?php echo $group->Name; ?></h1>
             <?php echo writeGroupBanner($group);?>
             <?php if($group->Icon) { ?>
                 <div class="Photo PhotoWrap PhotoWrapLarge Group-Icon-Big-Wrap">
                     <?php echo writeGroupIcon($group, '', 'Group-Icon Group-Icon-Big');?>
                 </div>
             <?php }?>
-            <div class="GroupOptions OptionsMenu ButtonGroup">
-                <?php echo getGroupOptionsDropdown();?>
-            </div>
-            <div class="Group-Header-Info">
-                <h1 class="Group-Title"><?php echo anchor($group->Name, groupUrl($group)); ?></h1>
                 <?php if($showDetails) { ?>
-                <div class="Group-Description userContent"><?php  echo  $group->Description; ?></div>
-                <div class="Meta Group-Meta Group-Info">
+            <div class="Group-Info">
+                <div class="Group-Description"><?php  echo  $group->Description; ?></div>
+                <div class="Meta Group-Meta Table">
                     <?php if($group->ChallengeUrl) { ?>
-                    <span class="MItem ">
-                        <span class="label">Challenge: </span>
-                        <span class="value"><?php echo anchor($group->Name, $group->ChallengeUrl);?></span>
-                    </span>
+                    <div class="MItem TableRow">
+                        <div class="TableCell Cell1">Challenge</div>
+                        <div class="TableCell Cell2"><?php echo anchor($group->Name, $group->ChallengeUrl);?></div>
+                    </div>
                     <?php } ?>
-                    <span class="MItem ">
-                        <span class="label">Owner: </span>
-                        <span class="value"><?php echo userAnchor($owner, 'Username');?></span>
-                    </span>
-                            <span class="MItem ">
-                        <span class="label">Leaders: </span>
-                        <span class="value">
+                    <div class="MItem TableRow">
+                        <div class="TableCell Cell1">Owner</div>
+                        <div class="TableCell Cell2"><?php echo userAnchor($owner, 'Username');?></div>
+                    </div>
+                    <div class="MItem TableRow">
+                        <div class="TableCell Cell1">Leaders</div>
+                        <div class="TableCell Cell2">
                             <?php echo writeGroupMembers($leaders, ','); ?>
-                        </span>
-                    </span>
-                    <span class="MItem "><span class="label"><?php  echo  $totalMembers.' member(s)'; ?></span></span>
-                    <span class="MItem "><span class="label">Created on <?php  echo  $group->DateInserted; ?></span></span>
-                    <span class="MItem "><span class="label">Privacy: </span><span class="value"><?php  echo  $group->Privacy; ?></span></span>
+                        </div>
+                    </div>
+                    <div class="MItem TableRow">
+                        <div class="TableCell Cell1">Member(s)</div>
+                        <div class="TableCell Cell2"><?php  echo  $totalMembers; ?></div>
+                    </div>
+
+                    <div class="MItem TableRow">
+                        <div class="TableCell Cell1">Created on</div>
+                        <div class="TableCell Cell2"><?php  echo  $group->DateInserted; ?></div>
+                    </div>
+                    <div class="MItem TableRow Last">
+                        <div class="TableCell Cell1">Privacy</div>
+                        <div class="TableCell Cell2"><?php  echo  $group->Privacy; ?></div>
+                    </div>
                 </div>
-                <?php }?>
             </div>
+           <?php }?>
         </div>
 
         <?php

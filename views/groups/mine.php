@@ -3,15 +3,11 @@ $Session = Gdn::session();
 
 include_once $this->fetchViewLocation('helper_functions');
 
-
-echo '<div class="media-list-container Group-Box my-groups">';
-echo '<div class="">';
-echo '<h2 class="H HomepageTitle">My Challenges</h2>';
-echo '</div>';
-
+echo '<h1 class="H HomepageTitle">Challenge Discussions</h1>';
 if ($this->data('ChallengeGroups')) {
+
     ?>
-    <ul class="media-list DataList">
+    <ul class="DataList GroupList">
         <?php
         echo writeGroups($this->data('ChallengeGroups'), $this);
         ?>
@@ -19,26 +15,23 @@ if ($this->data('ChallengeGroups')) {
     <?php
     if ($this->data('CountOfChallengeGroups') > 0) {
         ?>
-    <div class="MoreWrap"> <?php echo anchor('All My Challenges('.$this->data('CountOfChallengeGroups').')', '/groups/mine?filter=challenge', 'MoreWrap');?></div>
+    <div class="MoreWrap"> <?php echo anchor('All Challenge Discussions('.$this->data('CountOfChallengeGroups').')', '/groups/mine?filter=challenge', 'MoreWrap');?></div>
         <?php
     } else {
         ?>
-        <div class="Empty"><?php echo t('No challenges were found.'); ?></div>
+        <div class="Empty"><?php echo t('No Challenge discussions were found.'); ?></div>
         <?php
     }
     ?>
 <?php
 }
-echo '</div>';
 
-echo '<div class="media-list-container Group-Box my-groups">';
-echo '<div class="">';
-echo '<h2 class="H HomepageTitle">My Groups</h2>';
-echo '</div>';
-
+echo '<h1 class="H HomepageTitle">Group Discussions</h1>';
 if ($this->data('RegularGroups')) {
+
+    echo '<div class="media-list-container Group-Box my-groups">';
     ?>
-    <ul class="media-list DataList">
+    <ul class="DataList GroupList">
         <?php
         echo writeGroups($this->data('RegularGroups'), $this);
         ?>
@@ -46,11 +39,11 @@ if ($this->data('RegularGroups')) {
     <?php
         if ($this->data('CountOfRegularGroups') > 0) {
     ?>
-        <div class="MoreWrap"> <?php echo anchor('All My Groups('.$this->data('CountOfRegularGroups').')', '/groups/mine/?filter=regular', 'MoreWrap');?></div>
+        <div class="MoreWrap"> <?php echo anchor('All Group Discussions('.$this->data('CountOfRegularGroups').')', '/groups/mine/?filter=regular', 'MoreWrap');?></div>
     <?php
         } else {
             ?>
-            <div class="Empty"><?php echo t('No groups were found.'); ?></div>
+            <div class="Empty"><?php echo t('No Group discussions were found.'); ?></div>
             <?php
         }
     ?>
