@@ -24,8 +24,8 @@ $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
 
 <div class="Group-Content">
     <div class="Group-Box Group-Announcements Section-DiscussionList">
+        <h1 class="H">Announcements</h1>
         <div class="PageControls">
-            <h2 class="H">Announcements</h2>
             <div class="Button-Controls">
                 <?php
 
@@ -48,8 +48,8 @@ $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
         <?php } ?>
     </div>
     <div class="Group-Box Group-Discussions Section-DiscussionList">
+        <h1 class="H">Discussions</h1>
         <div class="PageControls">
-            <h2 class="H">Discussions</h2>
             <div class="Button-Controls">
                  <?php
                  if($groupModel->canAddDiscussion($Group)) {
@@ -76,7 +76,7 @@ $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
     <div class="Group-Info ClearFix clearfix">
         <div class="Group-Box Group-MembersPreview">
                 <div class="PageControls">
-                    <h2 class="Groups H">Members</h2>
+                    <h1 class="Groups H">Members</h1>
                 </div>
                 <?php if(count($Members) > 0 ) { ?>
                 <div class="PhotoGrid PhotoGridSmall">

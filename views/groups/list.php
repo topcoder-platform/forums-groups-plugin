@@ -3,11 +3,8 @@ $Session = Gdn::session();
 
 include_once $this->fetchViewLocation('helper_functions');
 
+    echo '<h1 class="H HomepageTitle">'.$this->data('Title').'</h1>';
 
-echo '<div class="media-list-container Group-Box my-groups">';
-        echo '<div class="PageControls">';
-        echo '<h2 class="H HomepageTitle">'.$this->data('Title').'</h2>';
-        echo '</div>';
 
     $PagerOptions = ['Wrapper' => '<span class="PagerNub">&#160;</span><div %1$s>%2$s</div>', 'RecordCount' => $this->data('CountGroups'), 'CurrentRecords' => $this->data('Groups')->numRows()];
     if ($this->data('_PagerUrl')) {
@@ -19,7 +16,7 @@ echo '<div class="media-list-container Group-Box my-groups">';
 
     if ($this->data('Groups')->numRows() > 0 ) {
         ?>
-        <ul class="media-list DataList">
+        <ul class="DataList GroupList">
             <?php include($this->fetchViewLocation('groups')); ?>
         </ul>
         <?php
@@ -33,4 +30,3 @@ echo '<div class="media-list-container Group-Box my-groups">';
         <div class="Empty"><?php echo $this->data('NoDataText'); ?></div>
     <?php
     }
-echo '</div>';

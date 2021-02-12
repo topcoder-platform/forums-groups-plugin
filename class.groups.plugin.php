@@ -16,8 +16,8 @@ if (!class_exists('Cocur\Slugify\Slugify')){
 class GroupsPlugin extends Gdn_Plugin {
     const GROUPS_ROUTE = '/groups';
     const ROUTE_MY_GROUPS = '/groups/mine';
-    const ROUTE_CHALLENGE_GROUPS = '/groups?filter=challenge'; //'/groups/challenges';
-    const ROUTE_REGULAR_GROUPS = '/groups?filter=regular'; //'/groups/regulars';
+    const ROUTE_CHALLENGE_GROUPS = '/groups/mine?filter=challenge'; //'/groups/challenges';
+    const ROUTE_REGULAR_GROUPS = '/groups/mine?filter=regular'; //'/groups/regulars';
     const GROUP_ROUTE = '/group/';
     const GROUPS_GROUP_ADD_PERMISSION = 'Groups.Group.Add';
     const GROUPS_GROUP_ARCHIVE_PERMISSION = 'Groups.Group.Archive';
@@ -39,7 +39,7 @@ class GroupsPlugin extends Gdn_Plugin {
             'CreateGroupTitle' => 'Create Challenge',
             'EditGroupTitle' => 'Edit Challenge',
             'TypeName' => 'challenge'],
-        'regular' =>   ['BreadcrumbLevel1Title' => 'Groups',
+        'regular' =>   ['BreadcrumbLevel1Title' => 'Group Discussions',
             'BreadcrumbLevel1Url' =>  self::ROUTE_REGULAR_GROUPS,
             'CreateGroupTitle' => 'Create Group',
             'EditGroupTitle' => 'Edit Group',
@@ -820,7 +820,7 @@ class GroupsPlugin extends Gdn_Plugin {
         if(Gdn::session()->isValid()) {
 
             echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenge Discussions', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
-           // echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Groups', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
+           // echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Group Discussions', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
            // echo '<li class="'.$this->getMenuItemCssClassFromRequestMethod($sender, 'mine').'">'. anchor('My Challenges & Groups', GroupsPlugin::ROUTE_MY_GROUPS).'</li>';
         }
     }

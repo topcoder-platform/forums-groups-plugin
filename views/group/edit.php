@@ -52,8 +52,8 @@ if (!$CancelUrl) {
     echo '</div>';
 
     echo '<div class="Buttons">';
-    echo anchor(t('Cancel'), $CancelUrl, 'Button');
     echo $this->Form->button( 'Save', ['class' => 'Button Primary']);
+    echo anchor(t('Cancel'), $CancelUrl, 'Button');
    // echo ' '.anchor(t('Edit'), '#', 'Button WriteButton Hidden')."\n";
     echo '</div>';
 

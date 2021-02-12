@@ -48,13 +48,13 @@ class GroupsController extends VanillaController {
         if($filter == 'challenge') {
             $this->View = 'index';
             $this->title('Challenge Discussions');
-            $this->setData('Title', 'My Challenges');
+            $this->setData('Title', 'Challenge Discussions');
             $this->setData('ShowAddButton', false);
             $this->setData('AddButtonTitle', 'Challenge');
             $this->setData('AddButtonLink', '/group/add?type=challenge');
             $this->setData('AvailableGroupTitle', 'Available Challenges');
-            $this->setData('MyGroupButtonTitle', 'All My Challenges');
-            $this->setData('AllGroupButtonTitle', 'All Available Challenges');
+            $this->setData('MyGroupButtonTitle', 'All Challenge Discussions');
+            $this->setData('AllGroupButtonTitle', 'All Available Challenge Discussions');
             $this->SetData('MyGroupButtonLink', '/groups/mine/?filter=challenge');
             $this->setData('AllGroupButtonLink', '/groups/all/?filter=challenge');
             $this->setData('NoGroups', 'No challenges were found.');
@@ -67,9 +67,9 @@ class GroupsController extends VanillaController {
             $this->setData('ShowAddButton', true);
             $this->setData('AddButtonTitle', 'Group');
             $this->setData('AddButtonLink', '/group/add?type=regular');
-            $this->setData('MyGroupButtonTitle', 'All My Groups');
-            $this->setData('AllGroupButtonTitle', 'All Available Groups');
-            $this->setData('AvailableGroupTitle', 'Available Groups');
+            $this->setData('MyGroupButtonTitle', 'All Group Discussions');
+            $this->setData('AllGroupButtonTitle', 'All Available Group Discussions');
+            $this->setData('AvailableGroupTitle', 'Available Group Discussions');
             $this->SetData('MyGroupButtonLink', '/groups/mine/?filter=regular');
             $this->setData('AllGroupButtonLink', '/groups/all/?filter=regular');
             $this->setData('NoGroups','No groups were found.');
@@ -81,7 +81,7 @@ class GroupsController extends VanillaController {
     public function index($Page=false, $filter) {
         DashboardNavModule::getDashboardNav()->setHighlightRoute('groups/challenges');
         $this->Menu->highlightRoute('groups/challenges');
-        Gdn_Theme::section('GroupList');
+       // Gdn_Theme::section('GroupList');
 
         $GroupModel = new GroupModel();
         $GroupModel->setFilters(Gdn::request()->get());
@@ -100,13 +100,13 @@ class GroupsController extends VanillaController {
         $defaultSort = $GroupModel::getAllowedSorts()['new']['orderBy'];
         $GroupData = $GroupModel->getMyGroups($where, $defaultSort, $Limit, $Offset);
         $countOfGroups = $GroupModel->countMyGroups($where);
-        $AvailableGroupData = $GroupModel->getAvailableGroups($where, $defaultSort, $Limit, $Offset);
+        //$AvailableGroupData = $GroupModel->getAvailableGroups($where, $defaultSort, $Limit, $Offset);
 
         $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
         $this->setData('Groups', $GroupData);
 
         $this->setData('CountOfGroups', $countOfGroups);
-        $this->setData('AvailableGroups', $AvailableGroupData);
+        //$this->setData('AvailableGroups', $AvailableGroupData);
         $this->render();
     }
 
@@ -190,16 +190,16 @@ class GroupsController extends VanillaController {
         $this->setData('_Limit', $Limit);
 
         if($filter == 'regular') {
-            $title = 'My Groups';
-            $noDataText = 'No groups were found.';
+            $title = 'Group Discussions';
+            $noDataText = 'No Group discussions were found.';
             $this->setData('Breadcrumbs', [
-                ['Name' => 'Groups', 'Url' =>  '/groups/'.$queryString],
+                //['Name' => 'Group Discussions', 'Url' =>  '/groups/'.$queryString],
                 ['Name' => $title, 'Url' =>  '/groups/mine/'.$queryString]]);
         } else if($filter == 'challenge'){
-            $title = 'My Challenges';
-            $noDataText = 'No challenges were found.';
+            $title = 'Challenge Discussions';
+            $noDataText = 'No Challenge discussions were found.';
             $this->setData('Breadcrumbs', [
-                ['Name' => 'Challenges', 'Url' =>  '/groups/'.$queryString],
+                //['Name' => 'Challenge Discussions', 'Url' =>  '/groups/'.$queryString],
                 ['Name' => $title, 'Url' =>  '/groups/mine/'.$queryString]]);
 
         }

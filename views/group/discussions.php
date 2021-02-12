@@ -19,14 +19,14 @@ $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
 <div class="Group-Content">
     <div class="Group-Box Group-Discussions Section-DiscussionList">
     <?php
+        echo ' <h1 class="H clearfix">Discussions</h1>';
         echo '<div class="PageControls">';
-        echo ' <h2 class="H media-list-heading">Discussions</h2>';
         $PagerOptions = ['Wrapper' => '<span class="PagerNub">&#160;</span><div %1$s>%2$s</div>', 'RecordCount' => $CountDiscussions, 'CurrentRecords' => $Discussions->numRows()];
         if ($this->data('_PagerUrl')) {
             $PagerOptions['Url'] = $this->data('_PagerUrl');
         }
         PagerModule::write($PagerOptions);
-        echo Gdn_Theme::module('NewDiscussionModule', $this->data('_NewDiscussionProperties', ['CssClass' => 'Button Action Primary']));
+        //  echo Gdn_Theme::module('NewDiscussionModule', $this->data('_NewDiscussionProperties', ['CssClass' => 'Button Action Primary']));
         // Avoid displaying in a category's list of discussions.
         if ($this->data('EnableFollowingFilter')) {
        // echo discussionFilters();

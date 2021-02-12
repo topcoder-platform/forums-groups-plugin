@@ -566,7 +566,7 @@ class GroupController extends VanillaController {
                 // $this->View = 'index';
                 break;
         }
-        Gdn_Theme::section('Group');
+        //Gdn_Theme::section('Group');
 
         // Remove score sort
         DiscussionModel::removeSort('top');
