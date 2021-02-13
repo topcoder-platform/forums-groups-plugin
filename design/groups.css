@@ -680,6 +680,10 @@ li.ui-timepicker-selected .ui-timepicker-duration,
     float: left
 }
 
+.DataList .PhotoWrap.ProfilePhotoMedium img{
+    height: 40px;
+}
+
 .Section-Group .DismissMessage {
     display: none
 }
