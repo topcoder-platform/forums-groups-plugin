@@ -57,7 +57,7 @@ if (!function_exists('getGroupOptionsDropdown')) {
         $canDelete = $groupModel->canDelete($group) ;
         $canLeave = $groupModel->canLeave($group);
         $canInviteMember = $groupModel->canInviteNewMember($group);
-        $canManageMembers = $groupModel->canManageMembers($group);
+       // $canManageMembers = $groupModel->canManageMembers($group);
         $canManageCategories = $groupModel->canManageCategories($group);
         $canFollow = boolval(c('Vanilla.EnableCategoryFollowing')) && $groupModel->canFollowGroup($group);
         $canWatch = $groupModel->canWatchGroup($group);
@@ -69,7 +69,7 @@ if (!function_exists('getGroupOptionsDropdown')) {
             ->addLinkIf($canDelete, t('Delete'), '/group/delete?groupid='.$groupID, 'delete', 'DeleteGroup Popup')
             ->addLinkIf($canManageCategories, t('Add Category'), '/group/category/'.$groupID, 'add_category', 'AddCategory Popup')
             ->addLinkIf($canInviteMember, t('Invite Member'), '/group/invite/'.$groupID, 'invite','InviteGroup Popup')
-            ->addLinkIf($canManageMembers, t('Manage Members'), '/group/members/'.$groupID, 'manage')
+           // ->addLinkIf($canManageMembers, t('Manage Members'), '/group/members/'.$groupID, 'manage')
             ->addLinkIf($canFollow && !$hasFollowed, t('Follow Categories'), '/group/follow/'.$groupID, 'follow','FollowGroup Popup')
             ->addLinkIf($hasFollowed, t('Unfollow Categories'), '/group/unfollow/'.$groupID, 'unfollow', 'UnfollowGroup Popup')
             ->addLinkIf($canWatch && !$hasWatched, t('Watch Categories'), '/group/watch/'.$groupID, 'watch','WatchGroup Popup')
@@ -127,23 +127,25 @@ if (!function_exists('writeGroupMembersWithDetails')) {
             $dateInserted = val('DateInserted', $memberObj);
             ?>
             <li id="Member_<?php echo $memberID?>" class="Item  hasPhotoWrap">
-                <?php  echo userPhoto($member, 'PhotoWrap'); ?>
-                <span class="Options">
-                    <div class="Buttons ">
-                        <?php
-                            if($groupModel->canChangeGroupRole($group)) {
-                                if($memberID != $ownerID) {
-                                    if ($role === GroupModel::ROLE_LEADER) {
-                                        echo anchor('Make Member', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_MEMBER . '&memberid=' . $memberID, 'Button MakeMember', '');
-                                    } else {
-                                        echo anchor('Make Leader', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_LEADER . '&memberid=' . $memberID, 'Button MakeLeader', '');
-                                    }
-                                    echo anchor('Remove', '/group/removemember/' . $groupID . '?memberid=' . $memberID, 'Button DeleteGroupMember', '');
-                                }
-                            }
+                <?php  echo userPhoto($member, 'PhotoWrap ProfilePhotoMedium');
+                /*
+                if($groupModel->canChangeGroupRole($group)) {
+
+                    echo '<span class="Options">';
+                    echo '<div class="Buttons ">';
+                    if($memberID != $ownerID) {
+                        if ($role === GroupModel::ROLE_LEADER) {
+                            echo anchor('Make Member', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_MEMBER . '&memberid=' . $memberID, 'Button MakeMember', '');
+                        } else {
+                            echo anchor('Make Leader', '/group/setrole/' . $groupID . '?role=' . GroupModel::ROLE_LEADER . '&memberid=' . $memberID, 'Button MakeLeader', '');
+                        }
+                        echo anchor('Remove', '/group/removemember/' . $groupID . '?memberid=' . $memberID, 'Button DeleteGroupMember', '');
+                    }
+                    echo '</div>';
+                    echo '</span>';
+                    }
+                */
                         ?>
-                    </div>
-                </span>
                 <div class="ItemContent">
                     <div class="Title" role="heading" aria-level="3">
                         <?php  echo userAnchor($member, 'Username'); ?>
@@ -237,6 +239,10 @@ if (!function_exists('writeGroupHeader')) {
                     <div class="MItem TableRow Last">
                         <div class="TableCell Cell1">Privacy</div>
                         <div class="TableCell Cell2"><?php  echo  $group->Privacy; ?></div>
+                    </div>
+                    <div class="MItem TableRow Last">
+                        <div class="TableCell Cell1">Archived</div>
+                        <div class="TableCell Cell2"><?php  echo  $group->Archived == 1? 'yes': 'no'; ?></div>
                     </div>
                 </div>
             </div>
