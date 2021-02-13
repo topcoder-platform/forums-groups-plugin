@@ -236,7 +236,7 @@ if (!function_exists('writeGroupHeader')) {
                         <div class="TableCell Cell1">Created on</div>
                         <div class="TableCell Cell2"><?php  echo  $group->DateInserted; ?></div>
                     </div>
-                    <div class="MItem TableRow Last">
+                    <div class="MItem TableRow">
                         <div class="TableCell Cell1">Privacy</div>
                         <div class="TableCell Cell2"><?php  echo  $group->Privacy; ?></div>
                     </div>
