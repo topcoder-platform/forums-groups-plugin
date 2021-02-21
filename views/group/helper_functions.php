@@ -20,15 +20,9 @@ if (!function_exists('allMembersUrl')) {
 }
 if(!function_exists('getRoleInGroupForCurrentUser')) {
     function getRoleInGroupForCurrentUser($groupId, $groups = null) {
-        $sender = Gdn::controller();
         if ($groups == null) {
-            $groups = $sender->data('CurrentUserGroups');
-        }
-
-        foreach($groups as $group) {
-            if($group->GroupID == $groupId) {
-                return $group->Role;
-            }
+            $groupRole = GroupModel::getGroupRoleFor(Gdn::session()->UserID, $groupId);
+            return $groupRole? $groupRole : null;
         }
         return null;
     }
@@ -39,15 +33,14 @@ if (!function_exists('getGroupOptionsDropdown')) {
      * Constructs an options dropdown menu for a group.
      *
      * @param object|array|null $group The group to get the dropdown options for.
-     * @param object|array|null $currentUserGroups
      * @return DropdownModule A dropdown consisting of discussion options.
      */
     function getGroupOptionsDropdown($group = null) {
         $dropdown = new DropdownModule('dropdown', '', 'OptionsMenu');
         $sender = Gdn::controller();
         $groupModel = new GroupModel();
-        $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
-        $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+        // $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
+        // $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
         if ($group == null) {
             $group = $sender->data('Group');
         }
@@ -115,8 +108,8 @@ if (!function_exists('writeGroupMembersWithDetails')) {
      */
     function writeGroupMembersWithDetails($members, $group) {
         $groupModel = new GroupModel();
-        $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
-        $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+        //  $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
+        //  $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
 
         foreach ($members as $member) {
             $memberObj = (object)$member;

@@ -477,9 +477,9 @@ class GroupModel extends Gdn_Model {
         }
     }
 
-    public function setCurrentUserTopcoderProjectRoles($topcoderProjectRoles = []){
-         $this->currentUserTopcoderProjectRoles = $topcoderProjectRoles;
-    }
+   //  public function setCurrentUserTopcoderProjectRoles($topcoderProjectRoles = []){
+   //      $this->currentUserTopcoderProjectRoles = $topcoderProjectRoles;
+   // }
 
     /**
      * Clear the groups cache.
@@ -811,7 +811,7 @@ class GroupModel extends Gdn_Model {
      * If false, the user only needs one of the specified permissions.
      * @return boolean Returns **true** if the user has permission or **false** otherwise.
      */
-    public function checkPermission($userID,$groupID,$categoryID = null, $permissionCategoryID = null, $permissions = null, $fullMatch = true){
+    public static function checkPermission($userID,$groupID,$categoryID = null, $permissionCategoryID = null, $permissions = null, $fullMatch = true, $groupIDs = []){
         if($userID === Gdn::session()->UserID) {
             $userPermissions = Gdn::session()->getPermissions();
         } else {
@@ -820,7 +820,7 @@ class GroupModel extends Gdn_Model {
 
         // Check access to a category
         $result = false;
-        if($this->isMemberOfGroup($userID,$groupID)) {
+        if(GroupModel::isMemberOfGroup($userID,$groupID)) {
             if ($permissions == null) {
                 $result = true;
             } else {
@@ -888,14 +888,9 @@ class GroupModel extends Gdn_Model {
      * @param $groupID
      * @return bool
      */
-    public function isMemberOfGroup($userID, $groupID) {
-        $groups = $this->memberOf($userID);
-        foreach ($groups as $group) {
-            if ($group->GroupID == $groupID) {
-                return true;
-            }
-        }
-        return false;
+    public static function isMemberOfGroup($userID, $groupID) {
+        $groups = self::memberOf($userID);
+        return array_key_exists($groupID, $groups);
     }
 
     /**
@@ -1153,17 +1148,23 @@ class GroupModel extends Gdn_Model {
      * @param $userID
      * @return array|mixed|null
      */
-    public function memberOf($userID){
+    public static function memberOf($userID){
         $key = 'UserGroup_'.$userID;
         $result = Gdn::cache()->get($key);
-        if ($result === Gdn_Cache::CACHEOP_FAILURE) {
-            $sql = clone $this->SQL;
+        if ($result === Gdn_Cache::CACHEOP_FAILURE || $result == false) {
+            $sql = Gdn::sql();
+            $sql = clone $sql;
             $sql->reset();
             $result = $sql->select('ug.Role, ug.GroupID')
                 ->from('UserGroup ug')
                 ->where('UserID', $userID)
-                ->get()->result();
-            Gdn::cache()->store($key, $result);
+                ->get()->result(DATASET_TYPE_ARRAY);
+            $map = array();
+            foreach ($result as $row) {
+                $map[$row['GroupID']][] = $row['Role'];
+            }
+
+            Gdn::cache()->store($key, $map);
             return $result;
         } else {
             return $result;
@@ -1172,13 +1173,14 @@ class GroupModel extends Gdn_Model {
 
     /**
      * Get a group role
+     * @param $userID
+     * @param $groupID
+     * @return mixed
      */
     public function getGroupRoleFor($userID, $groupID) {
-        $groups = $this->memberOf($userID);
-        foreach ($groups as $group) {
-            if ($group->GroupID == $groupID) {
-                return $group;
-            }
+        $groups = self::memberOf($userID);
+        if($groups && array_key_exists($groupID, $groups)) {
+         return $groups[$groupID];
         }
         return false;
     }
@@ -1191,8 +1193,7 @@ class GroupModel extends Gdn_Model {
         if($group->Privacy == self::PRIVACY_PUBLIC){
             return true;
         } else {
-            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-            $groupRole = val('Role', $result, null);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
             if($groupRole ||  Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
                 return true;
             }
@@ -1207,8 +1208,8 @@ class GroupModel extends Gdn_Model {
      */
     public function canFollowGroup($group) {
         if($group->ChallengeID) {
-            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-            return val('Role', $result, false);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+            return $groupRole;
         }
 
         return false;
@@ -1239,8 +1240,8 @@ class GroupModel extends Gdn_Model {
      */
     public function canWatchGroup($group) {
         if($group->ChallengeID) {
-            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-            return val('Role', $result, false);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+            return $groupRole;
         }
 
         return false;
@@ -1396,8 +1397,7 @@ class GroupModel extends Gdn_Model {
        if((int)$group->Archived === 1) {
            return false;
        }
-       $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-       $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
        if($groupRole == GroupModel::ROLE_LEADER ||
            Gdn::session()->UserID == $group->OwnerID ||
            $this->isProjectCopilot() || $this->isProjectManager() ||
@@ -1439,8 +1439,7 @@ class GroupModel extends Gdn_Model {
         if((int)$group->Archived === 1) {
             return false;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         if($groupRole == GroupModel::ROLE_LEADER ||
             Gdn::session()->UserID == $group->OwnerID) {
             return true;
@@ -1456,8 +1455,7 @@ class GroupModel extends Gdn_Model {
         if((int)$group->Archived === 1) {
             return false;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         if($groupRole == GroupModel::ROLE_LEADER ||
             Gdn::session()->UserID == $group->OwnerID) {
             return true;
@@ -1476,14 +1474,12 @@ class GroupModel extends Gdn_Model {
         if(isset($group->ChallengeID)) {
             return false;
         }
-
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        $groupRole = val('Role', $result, null);
         if(Gdn::session()->UserID == $group->OwnerID) {
             return false;
         }
 
-        return $groupRole != null;
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        return $groupRole != false;
     }
 
     /**
@@ -1494,8 +1490,7 @@ class GroupModel extends Gdn_Model {
         if((int)$group->Archived === 1) {
             return false;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         if($groupRole == GroupModel::ROLE_LEADER ||
             Gdn::session()->UserID == $group->OwnerID) {
             return true;
@@ -1511,8 +1506,7 @@ class GroupModel extends Gdn_Model {
         if((int)$group->Archived === 1) {
             return false;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         if($groupRole === GroupModel::ROLE_LEADER ||
             Gdn::session()->UserID === $group->OwnerID ||
             Gdn::session()->checkPermission(GroupsPlugin::GROUPS_EMAIL_INVITATIONS_PERMISSION)) {
@@ -1529,8 +1523,7 @@ class GroupModel extends Gdn_Model {
         if((int)$group->Archived === 1) {
             return false;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         if($groupRole || Gdn::session()->UserID == $group->OwnerID) {
             return true;
         }
@@ -1545,9 +1538,9 @@ class GroupModel extends Gdn_Model {
         if((int)$group->Archived === 1) {
             return false;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        $groupRole = val('Role', $result, null);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID == $group->OwnerID
+
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
+        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
          || $this->isProjectCopilot() || $this->isProjectManager()) {
             return true;
         }
@@ -1563,8 +1556,7 @@ class GroupModel extends Gdn_Model {
         if(!$groupID) {
             return true;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
         if($groupRole || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
@@ -1581,8 +1573,8 @@ class GroupModel extends Gdn_Model {
         if(!$groupID) {
             return $canEditDiscussion;
         }
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
+
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
 
         if(($groupRole && $discussion->InsertUserID == Gdn::session()->UserID)
             || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
@@ -1611,8 +1603,7 @@ class GroupModel extends Gdn_Model {
         }
 
         $group = $this->getByGroupID($groupID);
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
         if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID ||
             $this->isProjectCopilot() || $this->isProjectManager() ||
             Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
@@ -1638,8 +1629,7 @@ class GroupModel extends Gdn_Model {
         }
 
         $group = $this->getByGroupID($groupID);
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
         if($groupRole === GroupModel::ROLE_LEADER ||
             Gdn::session()->UserID === $group->OwnerID ||
             $this->isProjectCopilot() || $this->isProjectManager() ||
@@ -1664,8 +1654,7 @@ class GroupModel extends Gdn_Model {
         }
 
         $group = $this->getByGroupID($groupID);
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
         if($groupRole || Gdn::session()->UserID === $group->OwnerID
             || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
@@ -1689,8 +1678,7 @@ class GroupModel extends Gdn_Model {
         }
 
         $group = $this->getByGroupID($groupID);
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
         if($groupRole === GroupModel::ROLE_LEADER ||
             Gdn::session()->UserID === $group->OwnerID ||
             $this->isProjectCopilot() || $this->isProjectManager() ||
@@ -1716,8 +1704,7 @@ class GroupModel extends Gdn_Model {
         }
 
         $group = $this->getByGroupID($groupID);
-        $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        $groupRole = val('Role', $result, null);
+        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
         if($groupRole === GroupModel::ROLE_LEADER ||
             Gdn::session()->UserID === $group->OwnerID ||
             $this->isProjectCopilot() || $this->isProjectManager() ||
@@ -1739,8 +1726,7 @@ class GroupModel extends Gdn_Model {
         $groupID = $this->findGroupIDFromDiscussion($discussion);
         if($groupID) {
             $group = $this->getByGroupID($groupID);
-            $result = $this->getGroupRoleFor(Gdn::session()->UserID, $groupID);
-            $groupRole = val('Role', $result, null);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
             if ($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
                 || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
                 return true;

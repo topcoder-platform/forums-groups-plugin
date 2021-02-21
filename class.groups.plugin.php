@@ -176,6 +176,27 @@ class GroupsPlugin extends Gdn_Plugin {
         // nothing
     }
 
+    public function userModel_getGroups_create($sender, $userID) {
+        $userID = Gdn::session()->UserID;
+        $key = 'UserGroupIDs_'.$userID;
+        $result = Gdn::cache()->get($key);
+        if ($result === Gdn_Cache::CACHEOP_FAILURE) {
+            $sql = Gdn::sql();
+            $sql = clone $sql;
+            $sql->reset();
+
+            $result = $sql->select('ug.GroupID', '')
+                ->from('UserGroup ug')
+                ->where('UserID', $userID)
+                ->get()->resultArray(DATASET_TYPE_ARRAY);
+            $groupIDs = array_column($result, 'GroupID');
+            Gdn::cache()->store($key, $groupIDs);
+            return $result;
+        } else {
+            return $result;
+        }
+    }
+
     /**
      * Add challenge/Group name in discussion item
      * @param $sender
@@ -211,9 +232,9 @@ class GroupsPlugin extends Gdn_Plugin {
 
     public function base_groupOptionsDropdown_handler($sender, $args){
         $group = $args['Group'];
-        $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
+        // $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
         $groupModel = new GroupModel();
-        $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+        // $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
         $groupID = $group->GroupID;
         $canEdit = $groupModel->canEdit($group) ;
         $canDelete = $groupModel->canDelete($group) ;
@@ -293,9 +314,9 @@ class GroupsPlugin extends Gdn_Plugin {
             // The list of Topcoder Project Roles are added to a sender by Topcoder plugin before each request
             // for DiscussionController/GroupController
             $data = $sender->Data;
-            $currentTopcoderProjectRoles = val('ChallengeCurrentUserProjectRoles', $data, []);
+           // $currentTopcoderProjectRoles = val('ChallengeCurrentUserProjectRoles', $data, []);
             $groupModel = new GroupModel();
-            $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+           // $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
             $canView = $groupModel->canViewDiscussion($Discussion);
             $canEdit = $groupModel->canEditDiscussion($Discussion);
             $canDelete = $groupModel->canDeleteDiscussion($Discussion);
@@ -468,7 +489,7 @@ class GroupsPlugin extends Gdn_Plugin {
             throw notFoundException('Category');
         }
 
-        $hasPermission = $categoryModel::checkPermission($categoryID, 'Vanilla.Discussions.View');
+        $hasPermission =  CategoryModel::checkPermission($categoryID, 'Vanilla.Discussions.View');
         if (!$hasPermission) {
             throw permissionException('Vanilla.Discussion.View');
         }
@@ -803,11 +824,13 @@ class GroupsPlugin extends Gdn_Plugin {
             $allResourcesByMember = array_filter($resources, function ($k) use ($topcoderUsername) {
                 return $k->memberHandle == $topcoderUsername;
             });
-            foreach ($allResourcesByMember as $resource) {
-                $roleResource = array_filter($roleResources, function ($k) use ($resource) {
-                    return $k->id == $resource->roleId;
-                });
-                array_push($roles, reset($roleResource)->name);
+            if($allResourcesByMember) {
+                foreach ($allResourcesByMember as $resource) {
+                    $roleResource = array_filter($roleResources, function ($k) use ($resource) {
+                        return $k->id == $resource->roleId;
+                    });
+                    array_push($roles, reset($roleResource)->name);
+                }
             }
         }
         return $roles;
