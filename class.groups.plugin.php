@@ -176,27 +176,6 @@ class GroupsPlugin extends Gdn_Plugin {
         // nothing
     }
 
-    public function userModel_getGroups_create($sender, $userID) {
-        $userID = Gdn::session()->UserID;
-        $key = 'UserGroupIDs_'.$userID;
-        $result = Gdn::cache()->get($key);
-        if ($result === Gdn_Cache::CACHEOP_FAILURE) {
-            $sql = Gdn::sql();
-            $sql = clone $sql;
-            $sql->reset();
-
-            $result = $sql->select('ug.GroupID', '')
-                ->from('UserGroup ug')
-                ->where('UserID', $userID)
-                ->get()->resultArray(DATASET_TYPE_ARRAY);
-            $groupIDs = array_column($result, 'GroupID');
-            Gdn::cache()->store($key, $groupIDs);
-            return $result;
-        } else {
-            return $result;
-        }
-    }
-
     /**
      * Add challenge/Group name in discussion item
      * @param $sender
