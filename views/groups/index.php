@@ -1,8 +1,8 @@
 <?php if (!defined('APPLICATION')) exit();
 $Session = Gdn::session();
 $groupModel = new GroupModel();
-//$currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
-//$groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+$currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
+$groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
 
 $canAddGroup = $groupModel->canAddGroup();
 

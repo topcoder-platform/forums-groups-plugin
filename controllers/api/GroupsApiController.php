@@ -319,7 +319,7 @@ class GroupsApiController extends AbstractApiController {
             throw new NotFoundException('Group');
         }
 
-        $isMember = GroupModel::isMemberOfGroup($user->UserID, $group->GroupID);
+        $isMember = $this->groupModel->isMemberOfGroup($user->UserID, $group->GroupID);
         if(!$isMember) {
             throw new ClientException('User is not a member of this group');
         }
@@ -354,7 +354,7 @@ class GroupsApiController extends AbstractApiController {
             throw new NotFoundException('Group');
         }
 
-        $isMember = GroupModel::isMemberOfGroup($user->UserID, $group->GroupID);
+        $isMember = $this->groupModel->isMemberOfGroup($user->UserID, $group->GroupID);
         if(!$isMember) {
             throw new ClientException('User is not a member of this group');
         }

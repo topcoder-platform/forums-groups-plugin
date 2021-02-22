@@ -84,7 +84,7 @@ class GroupController extends VanillaController {
         $this->title($Group->Name);
 
         $this->setData('Breadcrumbs', $this->buildBreadcrumb($Group));
-      //  $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
+        $this->setData('CurrentUserGroups', $this->GroupModel->memberOf(Gdn::session()->UserID));
         $this->setData('TotalMembers', $this->GroupModel->countOfMembers($GroupID));
         $this->setData('Leaders', $this->GroupModel->getLeaders($GroupID));
         $this->setData('Members', $this->GroupModel->getMembers($GroupID,[],'',30,0));
@@ -402,7 +402,7 @@ class GroupController extends VanillaController {
                         $this->Form->addError('You are a member of "'.$Group->Name.'".');
                     } else {
                         try {
-                            if(GroupModel::isMemberOfGroup($user->UserID, $GroupID)) {
+                            if($this->GroupModel->isMemberOfGroup($user->UserID, $GroupID)) {
                                 $this->Form->addError('User is a member of "'.$Group->Name.'".');
                             } else {
                                 $this->GroupModel->invite($GroupID, $user->UserID);
@@ -524,7 +524,8 @@ class GroupController extends VanillaController {
      * @throws Gdn_UserException
      */
     public function accept($GroupID, $UserID) {
-        if(!GroupModel::isMemberOfGroup($UserID, $GroupID) ) {
+        $Group = $this->findGroup($GroupID);
+        if($this->GroupModel->isMemberOfGroup($UserID, $GroupID) !== true) {
             $this->GroupModel->accept($GroupID, $UserID);
         }
         redirectTo(GroupsPlugin::GROUP_ROUTE.$GroupID);
