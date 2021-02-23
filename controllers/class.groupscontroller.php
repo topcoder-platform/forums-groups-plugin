@@ -102,7 +102,7 @@ class GroupsController extends VanillaController {
         $countOfGroups = $GroupModel->countMyGroups($where);
         //$AvailableGroupData = $GroupModel->getAvailableGroups($where, $defaultSort, $Limit, $Offset);
 
-        $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
+       // $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
         $this->setData('Groups', $GroupData);
 
         $this->setData('CountOfGroups', $countOfGroups);
@@ -138,7 +138,7 @@ class GroupsController extends VanillaController {
         $countOfRegularGroups = $GroupModel->countMyGroups($regularGroupsWhere);
         $this->setData('RegularGroups', $regularGroupsData);
         $this->setData('CountOfRegularGroups', $countOfRegularGroups);
-        $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
+      //  $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
 
         $this->render();
     }
@@ -166,7 +166,7 @@ class GroupsController extends VanillaController {
         $CountGroups = $GroupModel->countMyGroups($where);
         $this->setData('CountGroups', $CountGroups);
         $this->setData('Groups', $GroupData, true);
-        $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
+      //  $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
 
         // Build a pager
         $PagerFactory = new Gdn_PagerFactory();
@@ -234,7 +234,7 @@ class GroupsController extends VanillaController {
         $CountGroups = $GroupModel->countAvailableGroups($where);
         $this->setData('CountGroups', $CountGroups);
         $this->setData('Groups', $GroupData, true);
-        $this->setData('CurrentUserGroups', $GroupModel->memberOf(Gdn::session()->UserID));
+      //  $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
 
         // Build a pager
         $PagerFactory = new Gdn_PagerFactory();
