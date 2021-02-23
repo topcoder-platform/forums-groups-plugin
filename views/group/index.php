@@ -17,7 +17,7 @@ $TotalMembers = $this->data('TotalMembers');
 $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
 $groupModel = new GroupModel();
 $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
-//$groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
+$groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
 
 ?>
 <?php echo writeGroupHeader($Group, true, $Owner, $Leaders, $TotalMembers);?>
