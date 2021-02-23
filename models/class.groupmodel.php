@@ -1161,9 +1161,8 @@ class GroupModel extends Gdn_Model {
                 ->get()->result(DATASET_TYPE_ARRAY);
             $map = array();
             foreach ($result as $row) {
-                $map[$row['GroupID']][] = $row['Role'];
+                $map[$row['GroupID']] = $row['Role'];
             }
-
             Gdn::cache()->store($key, $map);
             return $result;
         } else {
