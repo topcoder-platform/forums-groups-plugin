@@ -37,9 +37,9 @@ class GroupsController extends VanillaController {
         }
 
         // Add modules
-        $this->addModule('NewDiscussionModule');
+        // $this->addModule('NewDiscussionModule');
         $this->addModule('DiscussionFilterModule');
-        //$this->addModule('CategoriesModule');
+        // $this->addModule('CategoriesModule');
         $this->addModule('BookmarkedModule');
         $this->fireEvent('AfterInitialize');
     }
