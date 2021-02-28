@@ -1764,18 +1764,17 @@ class GroupModel extends Gdn_Model {
         $session = Gdn::session();
         $sender = Gdn::userModel()->getID($session->UserID);
         $user = Gdn::userModel()->getID($userID);
-        $appTitle = Gdn::config('Garden.Title');
         $email = new Gdn_Email();
-        $email->subject('['.$appTitle.'] '.$sender->Name.' invited you to '.$Group->Name);
+        $email->subject($sender->Name.' invited you to '.$Group->Name);
         $email->to($user->Email);
         $greeting = 'Hello!';
         $message = $greeting.'<br/>'.
             'You can accept or decline this invitation.';
 
         $emailTemplate = $email->getEmailTemplate()
-            ->setTitle('['.$appTitle.'] '.$sender->Name.' invited you to '.$Group->Name)
+            ->setTitle($sender->Name.' invited you to '.$Group->Name)
             ->setMessage($message)
-            ->setButton(externalUrl('/group/accept/'.$Group->GroupID.'?userID='.$userID), 'Accept' );
+            ->setButton(externalUrl('/group/accept/'.$Group->GroupID.'/'.$userID), 'Accept' );
 
         $email->setEmailTemplate($emailTemplate);
 
