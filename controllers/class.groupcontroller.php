@@ -493,7 +493,13 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
             $this->GroupModel->watchGroup($Group, Gdn::session()->UserID);
-            $this->setRedirectTo('group/' . $GroupID);
+            // Stay in the previous page
+            if(isset($_SERVER['HTTP_REFERER'])) {
+                $previous = $_SERVER['HTTP_REFERER'];
+                $this->setRedirectTo($previous);
+            } else {
+                $this->setRedirectTo('group/'.$GroupID);
+            }
         }
         $this->render();
     }
@@ -512,7 +518,13 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
             $this->GroupModel->unwatchGroup($Group, Gdn::session()->UserID);
-            $this->setRedirectTo('group/'.$GroupID);
+            // Stay in the previous page
+            if(isset($_SERVER['HTTP_REFERER'])) {
+                $previous = $_SERVER['HTTP_REFERER'];
+                $this->setRedirectTo($previous);
+            } else {
+                $this->setRedirectTo('group/'.$GroupID);
+            }
         }
         $this->render();
     }
