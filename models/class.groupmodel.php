@@ -1774,7 +1774,7 @@ class GroupModel extends Gdn_Model {
         $emailTemplate = $email->getEmailTemplate()
             ->setTitle($sender->Name.' invited you to '.$Group->Name)
             ->setMessage($message)
-            ->setButton(externalUrl('/group/accept/'.$Group->GroupID.'?userID='.$userID), 'Accept' );
+            ->setButton(externalUrl('/group/accept/'.$Group->GroupID.'/'.$userID), 'Accept' );
 
         $email->setEmailTemplate($emailTemplate);
 
