@@ -3,8 +3,12 @@
  * Group controller
  */
 
+use Garden\Schema\Validation;
+use Garden\Schema\ValidationException;
+use Garden\Web\Exception\ClientException;
 use Vanilla\Message;
 use Cocur\Slugify\Slugify;
+
 
 /**
  * Handles accessing & displaying a single group via /group endpoint.
@@ -405,9 +409,27 @@ class GroupController extends VanillaController {
                             if(GroupModel::isMemberOfGroup($user->UserID, $GroupID)) {
                                 $this->Form->addError('User is a member of "'.$Group->Name.'".');
                             } else {
-                                $this->GroupModel->invite($GroupID, $user->UserID);
-                                $this->informMessage('Invitation was sent.');
-                                $this->render('invitation_sent');
+                                $groupInvitation['GroupID'] = $GroupID;
+                                $groupInvitation['InviteeUserID'] = $user->UserID;
+                                $groupInvitationModel = new GroupInvitationModel();
+                                $result = $groupInvitationModel->save($groupInvitation);
+                                if($result) {
+                                    $this->informMessage('Invitation was sent.');
+                                } else {
+                                    $validationErrors = $groupInvitationModel->validationResults();
+                                    $validation = new Validation();
+                                    foreach ($validationErrors as $field => $errors) {
+                                        foreach ($errors as $error) {
+                                            $validation->addError(
+                                                $field,
+                                                $error
+                                            );
+                                        }
+                                    }
+                                   $this->Form->addError($validation->getMessage());
+                                   $this->render();
+                                }
+
                             }
                         } catch (\Exception $e) {
                             $this->Form->addError('Error' . $e->getMessage());
@@ -535,11 +557,41 @@ class GroupController extends VanillaController {
      * @param $UserID
      * @throws Gdn_UserException
      */
-    public function accept($GroupID, $UserID) {
-        if(!GroupModel::isMemberOfGroup($UserID, $GroupID) ) {
-            $this->GroupModel->accept($GroupID, $UserID);
+    public function accept($token ='') {
+
+        if (!Gdn::session()->isValid()) {
+            redirectTo(signInUrl());
         }
-        redirectTo(GroupsPlugin::GROUP_ROUTE.$GroupID);
+
+        $groupInvitationModel = new GroupInvitationModel();
+
+        $result = $groupInvitationModel->validateToken($token);
+        $validationErrors = $groupInvitationModel->Validation->results();
+        if (count($validationErrors) > 0) {
+            $validation = new Validation();
+            foreach ($validationErrors as $field => $errors) {
+                foreach ($errors as $error) {
+                    $validation->addError(
+                        $field,
+                        $error
+                    );
+                }
+            }
+            if ($validation->getErrorCount() > 0) {
+                $this->setData('ErrorMessage', $validation->getMessage());
+                $this->render();
+            }
+        } else {
+            if(!GroupModel::isMemberOfGroup($result['InviteeUserID'], $result['GroupID']) ) {
+                $GroupModel = new GroupModel();
+                $GroupModel->join($result['GroupID'],$result['InviteeUserID']);
+            }
+            $result['Status'] = 'accepted';
+            $result['DateAccepted'] = Gdn_Format::toDateTime();
+            $groupInvitationModel->save($result);
+            redirectTo(GroupsPlugin::GROUP_ROUTE.$result['GroupID']);
+        }
+
     }
 
 

@@ -861,27 +861,6 @@ class GroupModel extends Gdn_Model {
         $discussionModel = new DiscussionModel();
         $discussionModel->updateUserDiscussionCount($UserID, false);
     }
-
-    /**
-     * Invite a new member
-     * @param $GroupID
-     * @param $UserID
-     * @return bool|Gdn_DataSet|object|string
-     */
-    public function invite($GroupID, $UserID){
-        $this->sendInviteEmail($GroupID, $UserID);
-    }
-
-    /**
-     * Accept an invitation
-     * @param $GroupID
-     * @param $UserID
-     * @return bool|Gdn_DataSet|object|string
-     */
-    public function accept($groupID, $userID){
-        $this->join($groupID, $userID);
-    }
-
     /**
      * Return true if user is a member of the group
      * @param $userID
@@ -1503,6 +1482,10 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canInviteNewMember($group) {
+        if(is_numeric($group) && $group > 0) {
+            $group = $this->getByGroupID($group);
+        }
+
         if((int)$group->Archived === 1) {
             return false;
         }
@@ -1751,40 +1734,6 @@ class GroupModel extends Gdn_Model {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Send invite email.
-     *
-     * @param int $userID
-     * @param string $password
-     */
-    public function sendInviteEmail($GroupID, $userID) {
-        $Group = $this->getByGroupID($GroupID);
-        $session = Gdn::session();
-        $sender = Gdn::userModel()->getID($session->UserID);
-        $user = Gdn::userModel()->getID($userID);
-        $email = new Gdn_Email();
-        $email->subject($sender->Name.' invited you to '.$Group->Name);
-        $email->to($user->Email);
-        $greeting = 'Hello!';
-        $message = $greeting.'<br/>'.
-            'You can accept or decline this invitation.';
-
-        $emailTemplate = $email->getEmailTemplate()
-            ->setTitle($sender->Name.' invited you to '.$Group->Name)
-            ->setMessage($message)
-            ->setButton(externalUrl('/group/accept/'.$Group->GroupID.'/'.$userID), 'Accept' );
-
-        $email->setEmailTemplate($emailTemplate);
-
-        try {
-            $email->send();
-        } catch (Exception $e) {
-            if (debug()) {
-                throw $e;
-            }
-        }
     }
 
     public function notifyNewGroup($groupID, $groupName) {

@@ -179,3 +179,19 @@ if(!Gdn::structure()->table('Group')->columnExists('Archived')) {
     Gdn::structure()->table('Group')
         ->column('Archived', 'tinyint(1)', '0');
 }
+
+// FIX: https://github.com/topcoder-platform/forums/issues/449
+if(!Gdn::structure()->tableExists('GroupInvitation')) {
+    // Group  Invitation Table
+    Gdn::structure()->table('GroupInvitation')
+        ->primaryKey('GroupInvitationID')
+        ->column('GroupID', 'int', false, 'index')
+        ->column('Token', 'varchar(32)', false, 'unique')
+        ->column('InvitedByUserID', 'int', false, 'index')
+        ->column('InviteeUserID', 'int', false, 'index')
+        ->column('DateInserted', 'datetime', false, 'index')
+        ->column('Status', ['pending', 'accepted', 'declined', 'deleted'])
+        ->column('DateAccepted', 'datetime', true)
+        ->column('DateExpires', 'datetime')
+        ->set(false, false);
+}

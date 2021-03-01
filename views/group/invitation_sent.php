@@ -1,7 +1,8 @@
 <?php if (!defined('APPLICATION')) exit(); ?>
 <h1><?php echo t('Invite User'); ?></h1>
-<div class="Wrap">
-    <?php
-    echo '<div class="P">Invitation was sent.</div>';
-    ?>
-</div>
+<?php
+$error = $this->data('ErrorMessage');
+?>
+<?php
+echo '<div class="Messages Errors"><ul><li>'.$error.'</li></ul></div>';
+?>
