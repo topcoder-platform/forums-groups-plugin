@@ -112,6 +112,7 @@ class GroupController extends VanillaController {
             }
         }
 
+        $this->setData('DefaultAnnouncementUrl', $defaultDiscussionUrl.'?announce=1');
         $this->setData('DefaultDiscussionUrl', $defaultDiscussionUrl);
 
         // Find all discussions with content from after DateMarkedRead.
@@ -731,134 +732,6 @@ class GroupController extends VanillaController {
         $this->render();
     }
 
-
-    /**
-     * Create a new announcement
-     * @param string $GroupID
-     * @throws Gdn_UserException
-     */
-    public function announcement($GroupID=''){
-
-        $Group = $this->findGroup($GroupID);
-
-        if(!$this->GroupModel->canAddAnnouncement($Group)) {
-            throw permissionException();
-        }
-
-        $this->setData('Breadcrumbs',
-            [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-                ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Announcement')]]);
-        $this->title('New Announcement');
-        $this->setDiscussionData($Group, 2);
-        $this->View = 'discussion';
-        $this->render();
-    }
-
-    /**
-     * Create a new discussion
-     * @param string $GroupID
-     * @throws Gdn_UserException
-     */
-    public function discussion($GroupID=''){
-        $Group = $this->findGroup($GroupID);
-
-        if(!$this->GroupModel->canAddDiscussion($Group)) {
-            throw permissionException();
-        }
-
-        $this->setData('Breadcrumbs',   [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Discussion')]]);
-        $this->title('New Discussion');
-        $this->setDiscussionData($Group, 1);
-        $this->View = 'discussion';
-        $this->render();
-
-    }
-
-    /**
-     * Create a discussion.
-     * @param int $categoryID Unique ID of the category to add the discussion to.
-     */
-    public function setDiscussionData($Group,$Announce = '0') {
-        $categoryUrlCode =$Group->ChallengeID;//.'-questions';
-        $useCategories = true;
-
-        // Setup head
-        $this->addJsFile('jquery.autosize.min.js');
-        $this->addJsFile('autosave.js');
-        $this->addJsFile('post.js');
-
-        $session = Gdn::session();
-
-        Gdn_Theme::section('PostDiscussion');
-
-        // Set discussion, draft, and category data
-        $discussionID = isset($this->Discussion) ? $this->Discussion->DiscussionID : '';
-        $draftID = isset($this->Draft) ? $this->Draft->DraftID : 0;
-        $category = false;
-        $categoryModel = new CategoryModel();
-        $category = CategoryModel::categories($categoryUrlCode);
-        if ($category) {
-            $this->CategoryID = val('CategoryID', $category);
-        }
-
-        if ($category) {
-            $this->Category = (object)$category;
-            $this->setData('Category', $category);
-            $this->Form->addHidden('CategoryID', $this->Category->CategoryID);
-        }
-
-        $categoryData = $this->ShowCategorySelector ? CategoryModel::categories() : false;
-        if (!$useCategories || $this->ShowCategorySelector) {
-            // See if we should fill the CategoryID value.
-            $allowedCategories = CategoryModel::getByPermission(
-                'Discussions.Add',
-                $this->Form->getValue('CategoryID', $this->CategoryID),
-                ['Archived' => 0, 'AllowDiscussions' => 1],
-                ['AllowedDiscussionTypes' => $this->Data['Type']]
-            );
-            $allowedCategoriesCount = count($allowedCategories);
-
-            if ($this->ShowCategorySelector && $allowedCategoriesCount === 1) {
-                $this->ShowCategorySelector = false;
-            }
-
-            if (!$this->ShowCategorySelector && $allowedCategoriesCount) {
-                $allowedCategory = array_pop($allowedCategories);
-                $this->Form->addHidden('CategoryID', $allowedCategory['CategoryID']);
-
-                if ($this->Form->isPostBack() && !$this->Form->getFormValue('CategoryID')) {
-                    $this->Form->setFormValue('CategoryID', $allowedCategory['CategoryID']);
-                }
-            }
-        }
-
-        // Set the model on the form
-        $DiscussionModel = new DiscussionModel();
-        $this->Form->setModel($DiscussionModel);
-        $this->Form->addHidden('GroupID', $Group->GroupID);
-        $this->Form->Action = '/post/discussion';
-        $this->Form->setFormValue('Announce', $Announce);
-        $this->setData('Group', $Group);
-        $this->setData('Announce', $Announce);
-        $this->setData('_AnnounceOptions', $this->announceOptions());
-
-        $this->fireEvent('BeforeDiscussionRender');
-
-        if ($this->CategoryID) {
-            $breadcrumbs = CategoryModel::getAncestors($this->CategoryID);
-        } else {
-            $breadcrumbs = [];
-        }
-
-        $breadcrumbs[] = [
-            'Name' => $this->data('Title'),
-            'Url' => val('AddUrl', val($this->data('Type'), DiscussionModel::discussionTypes()), '/post/discussion')
-        ];
-
-        $this->setData('Breadcrumbs', $breadcrumbs);
-
-    }
 
     /**
      * Join a group

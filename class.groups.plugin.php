@@ -272,18 +272,6 @@ class GroupsPlugin extends Gdn_Plugin {
 
     }
 
-    public function base_BeforeCommentForm_handler($sender, $args) {
-        if($sender instanceof DiscussionController &&  $sender->Form->Action === '/post/comment/') {
-            $categoryID = $sender->data('Discussion.CategoryID');
-            $groupID = $sender->data('Discussion.GroupID');
-            $groupModel = new GroupModel();
-            if(!$groupModel->canAddComment($categoryID, $groupID)) {
-                $cssClass = &$args['FormCssClass'];
-                $cssClass = 'hidden';
-            }
-        }
-    }
-
     /**
      * The '...' discussion dropdown options
      */
@@ -295,8 +283,6 @@ class GroupsPlugin extends Gdn_Plugin {
             $data = $sender->Data;
            // $currentTopcoderProjectRoles = val('ChallengeCurrentUserProjectRoles', $data, []);
             $groupModel = new GroupModel();
-           // $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
-            $canView = $groupModel->canViewDiscussion($Discussion);
             $canEdit = $groupModel->canEditDiscussion($Discussion);
             $canDelete = $groupModel->canDeleteDiscussion($Discussion);
             $canDismiss = $groupModel->canDismissDiscussion($Discussion);
@@ -343,7 +329,6 @@ class GroupsPlugin extends Gdn_Plugin {
             }
 
             self::log('discussionController_discussionOptionsDropdown_handler', ['Discussion' => $Discussion->DiscussionID,
-                'currentUserTopcoderProjectRoles' =>$currentTopcoderProjectRoles,  'canView' => $canView,
                 'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canDismiss' => $canDismiss,
                 'canAnnounce' =>$canAnnounce, 'canSink' => $canSink, 'canMove' => $canMove, 'canReFetch' => $canRefetch ]);
         }
