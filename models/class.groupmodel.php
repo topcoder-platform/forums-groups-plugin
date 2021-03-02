@@ -1499,49 +1499,38 @@ class GroupModel extends Gdn_Model {
     }
 
     /**
-     *  Check add group discusion permission
+     *  Check add group discussion permission
      *
      */
     public function canAddDiscussion($group) {
         if((int)$group->Archived === 1) {
             return false;
         }
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        if($groupRole || Gdn::session()->UserID == $group->OwnerID) {
-            return true;
+
+        $categoryIDs = $this->getAllGroupCategoryIDs($group->GroupID);
+        foreach($categoryIDs as $categoryID) {
+            if (CategoryModel::checkPermission($categoryID, ['Vanilla.Discussions.Add'])) {
+                return true;
+            }
         }
+
         return false;
     }
 
     /**
-     *  Check add  group announcement permission
+     *  Check add group announcement permission
      *
      */
-    public function canAddAnnouncement($group) {
+    public function canAddNewAnnouncement($group) {
         if((int)$group->Archived === 1) {
             return false;
         }
 
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-         || $this->isProjectCopilot() || $this->isProjectManager()) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     *  Check view group discusion permission
-     *
-     */
-    public function canViewDiscussion($discussion) {
-        $groupID = $this->findGroupIDFromDiscussion($discussion);
-        if(!$groupID) {
-            return true;
-        }
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        if($groupRole || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
+        $categoryIDs = $this->getAllGroupCategoryIDs($group->GroupID);
+        foreach($categoryIDs as $categoryID) {
+            if (CategoryModel::checkPermission($categoryID, ['Vanilla.Discussions.Announce', 'Vanilla.Discussions.Add'])) {
+                return true;
+            }
         }
         return false;
     }
@@ -1553,17 +1542,11 @@ class GroupModel extends Gdn_Model {
     public function canEditDiscussion($discussion) {
         $canEditDiscussion = DiscussionModel::canEdit($discussion) ;
         $groupID= $this->findGroupIDFromDiscussion($discussion);
-        if(!$groupID) {
-            return $canEditDiscussion;
-        }
-
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-
-        if(($groupRole && $discussion->InsertUserID == Gdn::session()->UserID)
-            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+        if($groupID && Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
             return true;
         }
-        return false;
+
+        return $canEditDiscussion;
     }
 
     /**
@@ -1576,99 +1559,55 @@ class GroupModel extends Gdn_Model {
         && !$discussion->Dismissed
         && Gdn::session()->isValid();
 
-        $groupID= $this->findGroupIDFromDiscussion($discussion);
-        if(!$groupID ) {
-            return $canDismissDiscussion;
+        $groupID = $this->findGroupIDFromDiscussion($discussion);
+        if($groupID) {
+            $group = $this->getByGroupID($groupID);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
+            if ($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID ||
+                Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+                return true;
+            }
         }
-
-        if($canDismissDiscussion === false) {
-            return $canDismissDiscussion;
-        }
-
-        $group = $this->getByGroupID($groupID);
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        if($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID ||
-            $this->isProjectCopilot() || $this->isProjectManager() ||
-            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
-        }
-        return false;
+        return $canDismissDiscussion;
     }
 
     /**
-     *  Check announce group discusion permission
+     *  Check announce group discussion permission
      *
      */
     public function canAnnounceDiscussion($discussion) {
-        $canAnnounceDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Announce', true);
+        $canAnnounceDiscussion = CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Announce');
         $groupID = $this->findGroupIDFromDiscussion($discussion);
 
-        if(!$groupID ) {
-            return $canAnnounceDiscussion;
+        if($groupID) {
+            $group = $this->getByGroupID($groupID);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
+            if ($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID ||
+                Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+                return true;
+            }
         }
-
-        if($canAnnounceDiscussion === false) {
-            return $canAnnounceDiscussion;
-        }
-
-        $group = $this->getByGroupID($groupID);
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        if($groupRole === GroupModel::ROLE_LEADER ||
-            Gdn::session()->UserID === $group->OwnerID ||
-            $this->isProjectCopilot() || $this->isProjectManager() ||
-            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
-        }
-        return false;
+        return $canAnnounceDiscussion;
     }
 
     /**
-     *  Check announce group discusion permission
-     *
-     */
-    public function canAddComment($categoryID, $groupID) {
-        $canAddComment =  CategoryModel::checkPermission($categoryID, 'Vanilla.Comments.Add', true);
-        if(!$groupID ) {
-            return $canAddComment;
-        }
-
-        if($canAddComment === false) {
-            return $canAddComment;
-        }
-
-        $group = $this->getByGroupID($groupID);
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        if($groupRole || Gdn::session()->UserID === $group->OwnerID
-            || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     *  Check sink group discusion permission
+     *  Check sink group discussion permission
      *
      */
     public function canSinkDiscussion($discussion) {
-        $canSinkDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Sink', true);
+        $canSinkDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Sink');
         $groupID = $this->findGroupIDFromDiscussion($discussion);
-        if(!$groupID ) {
-            return $canSinkDiscussion;
+        if($groupID) {
+            $group = $this->getByGroupID($groupID);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
+            if ($groupRole === GroupModel::ROLE_LEADER ||
+                Gdn::session()->UserID === $group->OwnerID ||
+                Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+                return true;
+            }
         }
 
-        if($canSinkDiscussion === false) {
-            return $canSinkDiscussion;
-        }
-
-        $group = $this->getByGroupID($groupID);
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        if($groupRole === GroupModel::ROLE_LEADER ||
-            Gdn::session()->UserID === $group->OwnerID ||
-            $this->isProjectCopilot() || $this->isProjectManager() ||
-            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
-        }
-        return false;
+        return $canSinkDiscussion;
     }
 
     /**
@@ -1676,25 +1615,18 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canCloseDiscussion($discussion) {
-        $canCloseDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Close', true);
+        $canCloseDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Close');
         $groupID = $this->findGroupIDFromDiscussion($discussion);
-        if(!$groupID ) {
-            return $canCloseDiscussion;
+        if($groupID) {
+            $group = $this->getByGroupID($groupID);
+            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
+            if ($groupRole === GroupModel::ROLE_LEADER ||
+                Gdn::session()->UserID === $group->OwnerID ||
+                Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
+                return true;
+            }
         }
-
-        if($canCloseDiscussion === false) {
-            return $canCloseDiscussion;
-        }
-
-        $group = $this->getByGroupID($groupID);
-        $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-        if($groupRole === GroupModel::ROLE_LEADER ||
-            Gdn::session()->UserID === $group->OwnerID ||
-            $this->isProjectCopilot() || $this->isProjectManager() ||
-            Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
-        }
-        return false;
+        return $canCloseDiscussion;
     }
 
     /**
@@ -1702,7 +1634,8 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canMoveDiscussion($discussion) {
-        if ($this->canEditDiscussion($discussion) && Gdn::session()->checkPermission('Garden.Moderation.Manage')) {
+        if ($this->canEditDiscussion($discussion) &&
+            Gdn::session()->checkPermission('Garden.Moderation.Manage')) {
             return true;
         }
 
@@ -1719,21 +1652,25 @@ class GroupModel extends Gdn_Model {
     }
 
     public function canRefetchDiscussion($discussion) {
-         return $this->canEditDiscussion($discussion);
+         return $this->canEditDiscussion($discussion) &&  valr('Attributes.ForeignUrl', $discussion) ;
     }
 
+    /**
+     * Check delete discussion permission
+     * @param $discussion
+     * @return bool
+     */
     public function canDeleteDiscussion($discussion) {
-        $canDeleteDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Delete', true);
+        $canDeleteDiscussion = CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Delete');
+        /*
         $groupID = $this->findGroupIDFromDiscussion($discussion);
-        if(!$groupID) {
-             return $canDeleteDiscussion;
-        }
-
-        $group = $this->getByGroupID($groupID);
-        if($canDeleteDiscussion && Gdn::session()->UserID == $group->OwnerID) {
-            return true;
-        }
-        return false;
+        if($groupID) {
+            $group = $this->getByGroupID($groupID);
+            if (Gdn::session()->UserID == $group->OwnerID) {
+                return true;
+            }
+        }*/
+        return $canDeleteDiscussion ;
     }
 
     public function notifyNewGroup($groupID, $groupName) {

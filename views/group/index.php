@@ -29,8 +29,8 @@ $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProj
             <div class="Button-Controls">
                 <?php
 
-                if($groupModel->canAddAnnouncement($Group)) {
-                   echo anchor('New Announcement', $this->data('DefaultDiscussionUrl'), 'Button Primary', '');
+                if($groupModel->canAddNewAnnouncement($Group)) {
+                   echo anchor('New Announcement', $this->data('DefaultAnnouncementUrl'), 'Button Primary', '');
                 }
                 ?>
             </div>
