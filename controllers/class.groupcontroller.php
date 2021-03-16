@@ -3,8 +3,12 @@
  * Group controller
  */
 
+use Garden\Schema\Validation;
+use Garden\Schema\ValidationException;
+use Garden\Web\Exception\ClientException;
 use Vanilla\Message;
 use Cocur\Slugify\Slugify;
+
 
 /**
  * Handles accessing & displaying a single group via /group endpoint.
@@ -108,6 +112,7 @@ class GroupController extends VanillaController {
             }
         }
 
+        $this->setData('DefaultAnnouncementUrl', $defaultDiscussionUrl.'?announce=1');
         $this->setData('DefaultDiscussionUrl', $defaultDiscussionUrl);
 
         // Find all discussions with content from after DateMarkedRead.
@@ -405,9 +410,27 @@ class GroupController extends VanillaController {
                             if(GroupModel::isMemberOfGroup($user->UserID, $GroupID)) {
                                 $this->Form->addError('User is a member of "'.$Group->Name.'".');
                             } else {
-                                $this->GroupModel->invite($GroupID, $user->UserID);
-                                $this->informMessage('Invitation was sent.');
-                                $this->render('invitation_sent');
+                                $groupInvitation['GroupID'] = $GroupID;
+                                $groupInvitation['InviteeUserID'] = $user->UserID;
+                                $groupInvitationModel = new GroupInvitationModel();
+                                $result = $groupInvitationModel->save($groupInvitation);
+                                if($result) {
+                                    $this->informMessage('Invitation was sent.');
+                                } else {
+                                    $validationErrors = $groupInvitationModel->validationResults();
+                                    $validation = new Validation();
+                                    foreach ($validationErrors as $field => $errors) {
+                                        foreach ($errors as $error) {
+                                            $validation->addError(
+                                                $field,
+                                                $error
+                                            );
+                                        }
+                                    }
+                                   $this->Form->addError($validation->getMessage());
+                                   $this->render();
+                                }
+
                             }
                         } catch (\Exception $e) {
                             $this->Form->addError('Error' . $e->getMessage());
@@ -493,7 +516,13 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
             $this->GroupModel->watchGroup($Group, Gdn::session()->UserID);
-            $this->setRedirectTo('group/' . $GroupID);
+            // Stay in the previous page
+            if(isset($_SERVER['HTTP_REFERER'])) {
+                $previous = $_SERVER['HTTP_REFERER'];
+                $this->setRedirectTo($previous);
+            } else {
+                $this->setRedirectTo('group/'.$GroupID);
+            }
         }
         $this->render();
     }
@@ -512,7 +541,13 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group);
         if ($this->Form->authenticatedPostBack(true)) {
             $this->GroupModel->unwatchGroup($Group, Gdn::session()->UserID);
-            $this->setRedirectTo('group/'.$GroupID);
+            // Stay in the previous page
+            if(isset($_SERVER['HTTP_REFERER'])) {
+                $previous = $_SERVER['HTTP_REFERER'];
+                $this->setRedirectTo($previous);
+            } else {
+                $this->setRedirectTo('group/'.$GroupID);
+            }
         }
         $this->render();
     }
@@ -523,11 +558,41 @@ class GroupController extends VanillaController {
      * @param $UserID
      * @throws Gdn_UserException
      */
-    public function accept($GroupID, $UserID) {
-        if(!GroupModel::isMemberOfGroup($UserID, $GroupID) ) {
-            $this->GroupModel->accept($GroupID, $UserID);
+    public function accept($token ='') {
+
+        if (!Gdn::session()->isValid()) {
+            redirectTo(signInUrl());
         }
-        redirectTo(GroupsPlugin::GROUP_ROUTE.$GroupID);
+
+        $groupInvitationModel = new GroupInvitationModel();
+
+        $result = $groupInvitationModel->validateToken($token);
+        $validationErrors = $groupInvitationModel->Validation->results();
+        if (count($validationErrors) > 0) {
+            $validation = new Validation();
+            foreach ($validationErrors as $field => $errors) {
+                foreach ($errors as $error) {
+                    $validation->addError(
+                        $field,
+                        $error
+                    );
+                }
+            }
+            if ($validation->getErrorCount() > 0) {
+                $this->setData('ErrorMessage', $validation->getMessage());
+                $this->render();
+            }
+        } else {
+            if(!GroupModel::isMemberOfGroup($result['InviteeUserID'], $result['GroupID']) ) {
+                $GroupModel = new GroupModel();
+                $GroupModel->join($result['GroupID'],$result['InviteeUserID']);
+            }
+            $result['Status'] = 'accepted';
+            $result['DateAccepted'] = Gdn_Format::toDateTime();
+            $groupInvitationModel->save($result);
+            redirectTo(GroupsPlugin::GROUP_ROUTE.$result['GroupID']);
+        }
+
     }
 
 
@@ -667,134 +732,6 @@ class GroupController extends VanillaController {
         $this->render();
     }
 
-
-    /**
-     * Create a new announcement
-     * @param string $GroupID
-     * @throws Gdn_UserException
-     */
-    public function announcement($GroupID=''){
-
-        $Group = $this->findGroup($GroupID);
-
-        if(!$this->GroupModel->canAddAnnouncement($Group)) {
-            throw permissionException();
-        }
-
-        $this->setData('Breadcrumbs',
-            [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-                ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Announcement')]]);
-        $this->title('New Announcement');
-        $this->setDiscussionData($Group, 2);
-        $this->View = 'discussion';
-        $this->render();
-    }
-
-    /**
-     * Create a new discussion
-     * @param string $GroupID
-     * @throws Gdn_UserException
-     */
-    public function discussion($GroupID=''){
-        $Group = $this->findGroup($GroupID);
-
-        if(!$this->GroupModel->canAddDiscussion($Group)) {
-            throw permissionException();
-        }
-
-        $this->setData('Breadcrumbs',   [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
-            ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('New Discussion')]]);
-        $this->title('New Discussion');
-        $this->setDiscussionData($Group, 1);
-        $this->View = 'discussion';
-        $this->render();
-
-    }
-
-    /**
-     * Create a discussion.
-     * @param int $categoryID Unique ID of the category to add the discussion to.
-     */
-    public function setDiscussionData($Group,$Announce = '0') {
-        $categoryUrlCode =$Group->ChallengeID;//.'-questions';
-        $useCategories = true;
-
-        // Setup head
-        $this->addJsFile('jquery.autosize.min.js');
-        $this->addJsFile('autosave.js');
-        $this->addJsFile('post.js');
-
-        $session = Gdn::session();
-
-        Gdn_Theme::section('PostDiscussion');
-
-        // Set discussion, draft, and category data
-        $discussionID = isset($this->Discussion) ? $this->Discussion->DiscussionID : '';
-        $draftID = isset($this->Draft) ? $this->Draft->DraftID : 0;
-        $category = false;
-        $categoryModel = new CategoryModel();
-        $category = CategoryModel::categories($categoryUrlCode);
-        if ($category) {
-            $this->CategoryID = val('CategoryID', $category);
-        }
-
-        if ($category) {
-            $this->Category = (object)$category;
-            $this->setData('Category', $category);
-            $this->Form->addHidden('CategoryID', $this->Category->CategoryID);
-        }
-
-        $categoryData = $this->ShowCategorySelector ? CategoryModel::categories() : false;
-        if (!$useCategories || $this->ShowCategorySelector) {
-            // See if we should fill the CategoryID value.
-            $allowedCategories = CategoryModel::getByPermission(
-                'Discussions.Add',
-                $this->Form->getValue('CategoryID', $this->CategoryID),
-                ['Archived' => 0, 'AllowDiscussions' => 1],
-                ['AllowedDiscussionTypes' => $this->Data['Type']]
-            );
-            $allowedCategoriesCount = count($allowedCategories);
-
-            if ($this->ShowCategorySelector && $allowedCategoriesCount === 1) {
-                $this->ShowCategorySelector = false;
-            }
-
-            if (!$this->ShowCategorySelector && $allowedCategoriesCount) {
-                $allowedCategory = array_pop($allowedCategories);
-                $this->Form->addHidden('CategoryID', $allowedCategory['CategoryID']);
-
-                if ($this->Form->isPostBack() && !$this->Form->getFormValue('CategoryID')) {
-                    $this->Form->setFormValue('CategoryID', $allowedCategory['CategoryID']);
-                }
-            }
-        }
-
-        // Set the model on the form
-        $DiscussionModel = new DiscussionModel();
-        $this->Form->setModel($DiscussionModel);
-        $this->Form->addHidden('GroupID', $Group->GroupID);
-        $this->Form->Action = '/post/discussion';
-        $this->Form->setFormValue('Announce', $Announce);
-        $this->setData('Group', $Group);
-        $this->setData('Announce', $Announce);
-        $this->setData('_AnnounceOptions', $this->announceOptions());
-
-        $this->fireEvent('BeforeDiscussionRender');
-
-        if ($this->CategoryID) {
-            $breadcrumbs = CategoryModel::getAncestors($this->CategoryID);
-        } else {
-            $breadcrumbs = [];
-        }
-
-        $breadcrumbs[] = [
-            'Name' => $this->data('Title'),
-            'Url' => val('AddUrl', val($this->data('Type'), DiscussionModel::discussionTypes()), '/post/discussion')
-        ];
-
-        $this->setData('Breadcrumbs', $breadcrumbs);
-
-    }
 
     /**
      * Join a group
