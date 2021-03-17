@@ -1707,39 +1707,35 @@ class GroupModel extends Gdn_Model {
         $activityModel->save($data);
     }
 
-
     public function canArchiveGroup($group){
         return Gdn::session()->UserID == $group->OwnerID ||  Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_ARCHIVE_PERMISSION);
     }
 
+    public function canUnarchiveGroup($group){
+        return Gdn::session()->UserID == $group->OwnerID ||  Gdn::session()->checkPermission(GroupsPlugin::GROUPS_GROUP_ARCHIVE_PERMISSION);
+    }
+
     /**
-     * Archive a group and its categories
+     * Archive/Unarchive a group and its categories
      *
      * @param $group
+     * @param $archived boolean
      */
-    public function archiveGroup($group){
+    public function archiveGroup($group, $archived){
         if(is_numeric($group) && $group > 0) {
             $group = $this->getByGroupID($group);
         }
 
-       if($group->ChallengeID) {
-            $categoryModel = new CategoryModel();
-            $groupCategory = $categoryModel->getByCode($group->ChallengeID);
-            if($groupCategory->DisplayAs !== 'Discussions') {
-                $categories = CategoryModel::getSubtree($groupCategory->CategoryID, true);
-                $categoryIDs = array_column($categories, 'CategoryID');
-            } else {
-                $categoryIDs = [$groupCategory->CategoryID];
-            }
-
-            foreach($categoryIDs as $categoryID) {
-                $category = $categoryModel->getID($categoryID, DATASET_TYPE_ARRAY);
-                $category['Archived'] = 1;
-                $categoryModel->save($category);
-            }
+        $categories = Gdn::sql()->getWhere('Category', ['GroupID' => $group->GroupID])->resultArray();
+        $categoryIDs = array_column($categories, 'CategoryID');
+        $categoryModel = new CategoryModel();
+        foreach($categoryIDs as $categoryID) {
+            $category = $categoryModel->getID($categoryID, DATASET_TYPE_ARRAY);
+            $category['Archived'] = $archived;
+            $categoryModel->save($category);
         }
 
-        $group->Archived = 1;
+        $group->Archived = $archived;
         $this->save($group);
     }
 

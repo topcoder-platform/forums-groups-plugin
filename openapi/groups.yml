@@ -261,6 +261,23 @@ paths:
       requestBody:
         required: false
       summary: Archive a group.
+  '/groups/{id}/unarchive':
+    put:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Success
+      tags:
+        - Groups
+      requestBody:
+        required: false
+      summary: Unarchive a group.
 components:
   requestBodies:
     GroupPost:
