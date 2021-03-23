@@ -495,6 +495,7 @@ class GroupsApiController extends AbstractApiController {
                 'enum' => [GroupModel::PRIVACY_SECRET, GroupModel::PRIVACY_PUBLIC, GroupModel::PRIVACY_PRIVATE],
                 'description' => 'Privacy of the group'],
             'description:s' => 'Description of the group',
+            'archived:b' => 'The archived state of the group',
             'challengeID:s?' => 'The challengeID of the Topcoder challenge.',
             'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
         ]), 'GroupPost');
