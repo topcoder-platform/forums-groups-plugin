@@ -746,10 +746,15 @@ class GroupsPlugin extends Gdn_Plugin {
     public function base_userAnchor_handler($sender, $args){
         if($sender instanceof DiscussionController || $sender instanceof GroupController) {
             $user = $args['User'];
+            $isTopcoderAdmin = $args['IsTopcoderAdmin'];
             $anchorText = &$args['Text'];
             $resources = $sender->data('ChallengeResources');
             $roleResources = $sender->data('ChallengeRoleResources');
-            $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
+            $anchorText = '<span class="topcoderHandle">'.$anchorText.'</span>';
+            // Don't show Topcoder Challenge roles for admin roles
+            if(!$isTopcoderAdmin){
+                $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
+            }
         }
     }
 
@@ -764,14 +769,14 @@ class GroupsPlugin extends Gdn_Plugin {
             $anchorText = &$args['Title'];
             $resources = $sender->data('ChallengeResources');
             $roleResources = $sender->data('ChallengeRoleResources');
-            $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
         }
     }
 
     private function topcoderProjectRolesText($user, $resources = null, $roleResources = null) {
        $roles = $this->getTopcoderProjectRoles($user, $resources, $roleResources);
-       return count($roles) > 0 ? '(' . implode(', ', $roles) . ')' : '';
-
+       // FIX: https://github.com/topcoder-platform/forums/issues/476:  Show only Copilot, Reviewer roles
+       $displayedRoles =  array_intersect(array_unique($roles), ["Copilot", "Reviewer"]);
+       return count($displayedRoles) > 0 ? ' <span class="challengeRoles">(' . implode(', ', $displayedRoles) . ')</span>' : '';
     }
 
     /**
