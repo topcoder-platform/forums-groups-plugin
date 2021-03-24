@@ -637,7 +637,7 @@ class GroupController extends VanillaController {
 
         $Group = $this->GroupModel->getByGroupID($GroupID);
         $this->setData('Group',$Group);
-        $this->setData('Breadcrumbs', [['Name' => t('Challenge Discussions'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
+        $this->setData('Breadcrumbs', [['Name' => t('Challenge Forums'), 'Url' => GroupsPlugin::GROUPS_ROUTE],
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID], ['Name' => t('Discussions')]]);
 
         // Check for the feed keyword.

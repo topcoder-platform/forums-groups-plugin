@@ -47,19 +47,19 @@ class GroupsController extends VanillaController {
     public function setFilterPageData($filter) {
         if($filter == 'challenge') {
             $this->View = 'index';
-            $this->title('Challenge Discussions');
-            $this->setData('Title', 'Challenge Discussions');
+            $this->title('Challenge Forums');
+            $this->setData('Title', 'Challenge Forums');
             $this->setData('ShowAddButton', false);
             $this->setData('AddButtonTitle', 'Challenge');
             $this->setData('AddButtonLink', '/group/add?type=challenge');
             $this->setData('AvailableGroupTitle', 'Available Challenges');
-            $this->setData('MyGroupButtonTitle', 'All Challenge Discussions');
-            $this->setData('AllGroupButtonTitle', 'All Available Challenge Discussions');
+            $this->setData('MyGroupButtonTitle', 'All Challenge Forums');
+            $this->setData('AllGroupButtonTitle', 'All Available Challenge Forums');
             $this->SetData('MyGroupButtonLink', '/groups/mine/?filter=challenge');
             $this->setData('AllGroupButtonLink', '/groups/all/?filter=challenge');
             $this->setData('NoGroups', 'No challenges were found.');
             $this->setData('Breadcrumbs', [
-                ['Name' => 'Challenge Discussions', 'Url' => GroupsPlugin::ROUTE_CHALLENGE_GROUPS]]);
+                ['Name' => 'Challenge Forums', 'Url' => GroupsPlugin::ROUTE_CHALLENGE_GROUPS]]);
         } else if($filter == 'regular' ) {
             $this->View = 'index';
             $this->title('Groups');
@@ -67,14 +67,14 @@ class GroupsController extends VanillaController {
             $this->setData('ShowAddButton', true);
             $this->setData('AddButtonTitle', 'Group');
             $this->setData('AddButtonLink', '/group/add?type=regular');
-            $this->setData('MyGroupButtonTitle', 'All Group Discussions');
-            $this->setData('AllGroupButtonTitle', 'All Available Group Discussions');
-            $this->setData('AvailableGroupTitle', 'Available Group Discussions');
+            $this->setData('MyGroupButtonTitle', 'All Group Forums');
+            $this->setData('AllGroupButtonTitle', 'All Available Group Forums');
+            $this->setData('AvailableGroupTitle', 'Available Group Forums');
             $this->SetData('MyGroupButtonLink', '/groups/mine/?filter=regular');
             $this->setData('AllGroupButtonLink', '/groups/all/?filter=regular');
             $this->setData('NoGroups','No groups were found.');
             $this->setData('Breadcrumbs', [
-                ['Name' => t('Groups'), 'Url' =>  GroupsPlugin::ROUTE_REGULAR_GROUPS]]);
+                ['Name' => t('Group Forums'), 'Url' =>  GroupsPlugin::ROUTE_REGULAR_GROUPS]]);
         }
     }
 
@@ -196,10 +196,10 @@ class GroupsController extends VanillaController {
                 //['Name' => 'Group Discussions', 'Url' =>  '/groups/'.$queryString],
                 ['Name' => $title, 'Url' =>  '/groups/mine/'.$queryString]]);
         } else if($filter == 'challenge'){
-            $title = 'Challenge Discussions';
-            $noDataText = 'No Challenge discussions were found.';
+            $title = 'Challenge Forums';
+            $noDataText = 'No Challenge forums were found.';
             $this->setData('Breadcrumbs', [
-                //['Name' => 'Challenge Discussions', 'Url' =>  '/groups/'.$queryString],
+                //['Name' => 'Challenge Forums', 'Url' =>  '/groups/'.$queryString],
                 ['Name' => $title, 'Url' =>  '/groups/mine/'.$queryString]]);
 
         }
