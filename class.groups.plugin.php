@@ -34,12 +34,12 @@ class GroupsPlugin extends Gdn_Plugin {
     const ROLE_TOPCODER_MANAGER = 'Connect Manager';
 
     const UI = [
-        'challenge' => ['BreadcrumbLevel1Title' => 'Challenge Discussions',
+        'challenge' => ['BreadcrumbLevel1Title' => 'Challenge Forums',
             'BreadcrumbLevel1Url' =>  self::ROUTE_CHALLENGE_GROUPS,
             'CreateGroupTitle' => 'Create Challenge',
             'EditGroupTitle' => 'Edit Challenge',
             'TypeName' => 'challenge'],
-        'regular' =>   ['BreadcrumbLevel1Title' => 'Group Discussions',
+        'regular' =>   ['BreadcrumbLevel1Title' => 'Group Forums',
             'BreadcrumbLevel1Url' =>  self::ROUTE_REGULAR_GROUPS,
             'CreateGroupTitle' => 'Create Group',
             'EditGroupTitle' => 'Edit Group',
@@ -811,7 +811,7 @@ class GroupsPlugin extends Gdn_Plugin {
     private function addGroupLinkToMenu($sender) {
         if(Gdn::session()->isValid()) {
 
-            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenge Discussions', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
+            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenge Forums', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
            // echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Group Discussions', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
            // echo '<li class="'.$this->getMenuItemCssClassFromRequestMethod($sender, 'mine').'">'. anchor('My Challenges & Groups', GroupsPlugin::ROUTE_MY_GROUPS).'</li>';
         }

@@ -3,7 +3,7 @@ $Session = Gdn::session();
 
 include_once $this->fetchViewLocation('helper_functions');
 
-echo '<h1 class="H HomepageTitle">Challenge Discussions</h1>';
+echo '<h1 class="H HomepageTitle">Challenge Forums</h1>';
 if ($this->data('ChallengeGroups')) {
 
     ?>
@@ -15,11 +15,11 @@ if ($this->data('ChallengeGroups')) {
     <?php
     if ($this->data('CountOfChallengeGroups') > 0) {
         ?>
-    <div class="MoreWrap"> <?php echo anchor('All Challenge Discussions('.$this->data('CountOfChallengeGroups').')', '/groups/mine?filter=challenge', 'MoreWrap');?></div>
+    <div class="MoreWrap"> <?php echo anchor('All Challenge Forums('.$this->data('CountOfChallengeGroups').')', '/groups/mine?filter=challenge', 'MoreWrap');?></div>
         <?php
     } else {
         ?>
-        <div class="Empty"><?php echo t('No Challenge discussions were found.'); ?></div>
+        <div class="Empty"><?php echo t('No Challenge Forums were found.'); ?></div>
         <?php
     }
     ?>
@@ -39,11 +39,11 @@ if ($this->data('RegularGroups')) {
     <?php
         if ($this->data('CountOfRegularGroups') > 0) {
     ?>
-        <div class="MoreWrap"> <?php echo anchor('All Group Discussions('.$this->data('CountOfRegularGroups').')', '/groups/mine/?filter=regular', 'MoreWrap');?></div>
+        <div class="MoreWrap"> <?php echo anchor('All Group Forums('.$this->data('CountOfRegularGroups').')', '/groups/mine/?filter=regular', 'MoreWrap');?></div>
     <?php
         } else {
             ?>
-            <div class="Empty"><?php echo t('No Group discussions were found.'); ?></div>
+            <div class="Empty"><?php echo t('No Group Forums were found.'); ?></div>
             <?php
         }
     ?>
