@@ -753,7 +753,10 @@ class GroupsPlugin extends Gdn_Plugin {
             $anchorText = '<span class="topcoderHandle">'.$anchorText.'</span>';
             // Don't show Topcoder Challenge roles for admin roles
             if(!$isTopcoderAdmin){
-                $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
+                $roles =  $this->topcoderProjectRolesText($user, $resources, $roleResources);
+                if($roles) {
+                    $anchorText = $anchorText . '&nbsp;<span class="challengeRoles">('.$roles. ')</span>';
+                }
             }
         }
     }
@@ -764,11 +767,19 @@ class GroupsPlugin extends Gdn_Plugin {
      * @param $args
      */
     public function base_userPhoto_handler($sender, $args){
-        if($sender instanceof DiscussionController || $sender instanceof GroupController) {
+        if($sender instanceof DiscussionController || $sender instanceof GroupController || $sender instanceof PostController) {
             $user = $args['User'];
             $anchorText = &$args['Title'];
+            $isTopcoderAdmin = $args['IsTopcoderAdmin'];
             $resources = $sender->data('ChallengeResources');
             $roleResources = $sender->data('ChallengeRoleResources');
+            // Don't show Topcoder Challenge roles for admin roles
+            if(!$isTopcoderAdmin){
+                $roles =  $this->topcoderProjectRolesText($user, $resources, $roleResources);
+                if($roles) {
+                    $anchorText = $anchorText.'&nbsp;('.$roles. ')';
+                }
+            }
         }
     }
 
@@ -776,7 +787,7 @@ class GroupsPlugin extends Gdn_Plugin {
        $roles = $this->getTopcoderProjectRoles($user, $resources, $roleResources);
        // FIX: https://github.com/topcoder-platform/forums/issues/476:  Show only Copilot, Reviewer roles
        $displayedRoles =  array_intersect(array_unique($roles), ["Copilot", "Reviewer"]);
-       return count($displayedRoles) > 0 ? ' <span class="challengeRoles">(' . implode(', ', $displayedRoles) . ')</span>' : '';
+       return count($displayedRoles) > 0 ? implode(', ', $displayedRoles) : '';
     }
 
     /**
