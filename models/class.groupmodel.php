@@ -1549,21 +1549,10 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canDismissDiscussion($discussion) {
-        $canDismissDiscussion =  CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Dismiss', true)
+        $canDismissDiscussion =  c('Vanilla.Discussions.Dismiss', 1)
         && $discussion->Announce
         && !$discussion->Dismissed
         && Gdn::session()->isValid();
-
-        /*
-        $groupID = $this->findGroupIDFromDiscussion($discussion);
-        if($groupID) {
-            $group = $this->getByGroupID($groupID);
-            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-            if ($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID ||
-                Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-                return true;
-            }
-        } */
         return $canDismissDiscussion;
 
     }
