@@ -744,7 +744,7 @@ class GroupsPlugin extends Gdn_Plugin {
      * @param $args
      */
     public function base_userAnchor_handler($sender, $args){
-        if($sender instanceof DiscussionController || $sender instanceof GroupController) {
+        if($sender instanceof DiscussionController || $sender instanceof GroupController || $sender instanceof PostController) {
             $user = $args['User'];
             $isTopcoderAdmin = $args['IsTopcoderAdmin'];
             $anchorText = &$args['Text'];
