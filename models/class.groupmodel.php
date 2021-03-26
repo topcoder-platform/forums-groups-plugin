@@ -1541,11 +1541,6 @@ class GroupModel extends Gdn_Model {
      */
     public function canEditDiscussion($discussion) {
         $canEditDiscussion = DiscussionModel::canEdit($discussion) ;
-        $groupID= $this->findGroupIDFromDiscussion($discussion);
-        if($groupID && Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-            return true;
-        }
-
         return $canEditDiscussion;
     }
 
@@ -1559,6 +1554,7 @@ class GroupModel extends Gdn_Model {
         && !$discussion->Dismissed
         && Gdn::session()->isValid();
 
+        /*
         $groupID = $this->findGroupIDFromDiscussion($discussion);
         if($groupID) {
             $group = $this->getByGroupID($groupID);
@@ -1567,8 +1563,9 @@ class GroupModel extends Gdn_Model {
                 Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
                 return true;
             }
-        }
+        } */
         return $canDismissDiscussion;
+
     }
 
     /**
@@ -1638,16 +1635,6 @@ class GroupModel extends Gdn_Model {
             Gdn::session()->checkPermission('Garden.Moderation.Manage')) {
             return true;
         }
-
-        $groupID = $this->findGroupIDFromDiscussion($discussion);
-        if($groupID) {
-            $group = $this->getByGroupID($groupID);
-            $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $groupID);
-            if ($groupRole === GroupModel::ROLE_LEADER || Gdn::session()->UserID === $group->OwnerID
-                || Gdn::session()->checkPermission(GroupsPlugin::GROUPS_MODERATION_MANAGE_PERMISSION)) {
-                return true;
-            }
-        }
         return false;
     }
 
@@ -1662,14 +1649,6 @@ class GroupModel extends Gdn_Model {
      */
     public function canDeleteDiscussion($discussion) {
         $canDeleteDiscussion = CategoryModel::checkPermission($discussion->CategoryID, 'Vanilla.Discussions.Delete');
-        /*
-        $groupID = $this->findGroupIDFromDiscussion($discussion);
-        if($groupID) {
-            $group = $this->getByGroupID($groupID);
-            if (Gdn::session()->UserID == $group->OwnerID) {
-                return true;
-            }
-        }*/
         return $canDeleteDiscussion ;
     }
 
