@@ -603,13 +603,14 @@ class GroupsPlugin extends Gdn_Plugin {
             if($groupName) {
                 $headline = sprintf('%s: %s', $groupName, $headline);
             }
-            $data["HeadlineFormat"] = $headline;
+            $data['HeadlineFormat'] = $headline;
+            $data['ActionText'] = 'Open Discussion';
             // Format to Html
             $message = Gdn::formatService()->renderQuote($discussion['Body'], $discussion['Format']);
             // We just converted it to HTML. Make sure everything downstream knows it.
             // Taking this HTML and feeding it into the Rich Format for example, would be invalid.
             $data['Format'] = 'Html';
-            $data["Story"] =
+            $data['Story'] =
                 '<p>You are watching the category "' . $categoryName . '", ' .
                 'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<p/>' .
                 '<hr/>' .
@@ -657,7 +658,8 @@ class GroupsPlugin extends Gdn_Plugin {
             if($groupName) {
                 $headline = sprintf('%s: %s', $groupName, $headline);
             }
-            $data["HeadlineFormat"] = $headline;
+            $data['ActionText'] = 'Open Discussion';
+            $data['HeadlineFormat'] = $headline;
             // $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
             // Format to Html
             $discussionStory = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
@@ -665,7 +667,7 @@ class GroupsPlugin extends Gdn_Plugin {
             // We just converted it to HTML. Make sure everything downstream knows it.
             // Taking this HTML and feeding it into the required format for example, would be invalid.
             $data['Format'] = 'Html';
-            $data["Story"] =
+            $data['Story'] =
                 '<p>You are watching the discussion "' . $discussionName . '" in the category "' .$categoryName.'" '.
                 'which was updated ' . $commentDateInserted . ' by ' . $commentAuthor->Name . ':</p>' .
                 '<hr/>' .
@@ -696,7 +698,8 @@ class GroupsPlugin extends Gdn_Plugin {
             $groupName = $group->Name;
             $groupType = ucfirst(self::UI[$group->Type]['TypeName']);
             $color = c('Garden.EmailTemplate.ButtonTextColor');
-            return sprintf('<span>%s: %s </span><br/>', $groupType, anchor($groupName, url(GroupsPlugin::GROUP_ROUTE . $group->GroupID, true), '',
+            $url = $group->ChallengeUrl? url($group->ChallengeUrl, true) :  url(GroupsPlugin::GROUP_ROUTE . $group->GroupID, true);
+            return sprintf('<span>%s: %s </span><br/>', $groupType, anchor($groupName, $url, '',
                 ['rel' => 'noopener noreferrer', 'target' => '_blank', 'style' => 'color:' . $color]));
         }
         return '';
