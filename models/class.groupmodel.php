@@ -1466,12 +1466,16 @@ class GroupModel extends Gdn_Model {
      *
      */
     public function canManageMembers($group) {
-        if((int)$group->Archived === 1) {
+        if(Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+
+        if((int)$group->Archived == 1) {
             return false;
         }
+
         $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
-        if($groupRole == GroupModel::ROLE_LEADER ||
-            Gdn::session()->UserID == $group->OwnerID) {
+        if($groupRole == GroupModel::ROLE_LEADER ) {
             return true;
         }
         return false;
@@ -1486,12 +1490,15 @@ class GroupModel extends Gdn_Model {
             $group = $this->getByGroupID($group);
         }
 
-        if((int)$group->Archived === 1) {
+        if(Gdn::session()->UserID == $group->OwnerID) {
+            return true;
+        }
+
+        if((int)$group->Archived == 1) {
             return false;
         }
         $groupRole = self::getGroupRoleFor(Gdn::session()->UserID, $group->GroupID);
         if($groupRole === GroupModel::ROLE_LEADER ||
-            Gdn::session()->UserID === $group->OwnerID ||
             Gdn::session()->checkPermission(GroupsPlugin::GROUPS_EMAIL_INVITATIONS_PERMISSION)) {
             return true;
         }
