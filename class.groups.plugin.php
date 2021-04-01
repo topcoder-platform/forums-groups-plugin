@@ -34,12 +34,12 @@ class GroupsPlugin extends Gdn_Plugin {
     const ROLE_TOPCODER_MANAGER = 'Connect Manager';
 
     const UI = [
-        'challenge' => ['BreadcrumbLevel1Title' => 'Challenge Discussions',
+        'challenge' => ['BreadcrumbLevel1Title' => 'Challenge Forums',
             'BreadcrumbLevel1Url' =>  self::ROUTE_CHALLENGE_GROUPS,
             'CreateGroupTitle' => 'Create Challenge',
             'EditGroupTitle' => 'Edit Challenge',
             'TypeName' => 'challenge'],
-        'regular' =>   ['BreadcrumbLevel1Title' => 'Group Discussions',
+        'regular' =>   ['BreadcrumbLevel1Title' => 'Group Forums',
             'BreadcrumbLevel1Url' =>  self::ROUTE_REGULAR_GROUPS,
             'CreateGroupTitle' => 'Create Group',
             'EditGroupTitle' => 'Edit Group',
@@ -603,13 +603,14 @@ class GroupsPlugin extends Gdn_Plugin {
             if($groupName) {
                 $headline = sprintf('%s: %s', $groupName, $headline);
             }
-            $data["HeadlineFormat"] = $headline;
+            $data['HeadlineFormat'] = $headline;
+            $data['ActionText'] = 'Open Discussion';
             // Format to Html
             $message = Gdn::formatService()->renderQuote($discussion['Body'], $discussion['Format']);
             // We just converted it to HTML. Make sure everything downstream knows it.
             // Taking this HTML and feeding it into the Rich Format for example, would be invalid.
             $data['Format'] = 'Html';
-            $data["Story"] =
+            $data['Story'] =
                 '<p>You are watching the category "' . $categoryName . '", ' .
                 'which was updated ' . $dateInserted . ' by ' . $author->Name . ':<p/>' .
                 '<hr/>' .
@@ -657,7 +658,8 @@ class GroupsPlugin extends Gdn_Plugin {
             if($groupName) {
                 $headline = sprintf('%s: %s', $groupName, $headline);
             }
-            $data["HeadlineFormat"] = $headline;
+            $data['ActionText'] = 'Open Discussion';
+            $data['HeadlineFormat'] = $headline;
             // $data["HeadlineFormat"] = 'The new discussion has been posted in the category ' . $categoryName . '.';
             // Format to Html
             $discussionStory = condense(Gdn_Format::to($discussion['Body'], $discussion['Format']));
@@ -665,7 +667,7 @@ class GroupsPlugin extends Gdn_Plugin {
             // We just converted it to HTML. Make sure everything downstream knows it.
             // Taking this HTML and feeding it into the required format for example, would be invalid.
             $data['Format'] = 'Html';
-            $data["Story"] =
+            $data['Story'] =
                 '<p>You are watching the discussion "' . $discussionName . '" in the category "' .$categoryName.'" '.
                 'which was updated ' . $commentDateInserted . ' by ' . $commentAuthor->Name . ':</p>' .
                 '<hr/>' .
@@ -696,7 +698,8 @@ class GroupsPlugin extends Gdn_Plugin {
             $groupName = $group->Name;
             $groupType = ucfirst(self::UI[$group->Type]['TypeName']);
             $color = c('Garden.EmailTemplate.ButtonTextColor');
-            return sprintf('<span>%s: %s </span><br/>', $groupType, anchor($groupName, url(GroupsPlugin::GROUP_ROUTE . $group->GroupID, true), '',
+            $url = $group->ChallengeUrl? url($group->ChallengeUrl, true) :  url(GroupsPlugin::GROUP_ROUTE . $group->GroupID, true);
+            return sprintf('<span>%s: %s </span><br/>', $groupType, anchor($groupName, $url, '',
                 ['rel' => 'noopener noreferrer', 'target' => '_blank', 'style' => 'color:' . $color]));
         }
         return '';
@@ -744,12 +747,20 @@ class GroupsPlugin extends Gdn_Plugin {
      * @param $args
      */
     public function base_userAnchor_handler($sender, $args){
-        if($sender instanceof DiscussionController || $sender instanceof GroupController) {
+        if($sender instanceof DiscussionController || $sender instanceof GroupController || $sender instanceof PostController) {
             $user = $args['User'];
+            $isTopcoderAdmin = $args['IsTopcoderAdmin'];
             $anchorText = &$args['Text'];
             $resources = $sender->data('ChallengeResources');
             $roleResources = $sender->data('ChallengeRoleResources');
-            $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
+            $anchorText = '<span class="topcoderHandle">'.$anchorText.'</span>';
+            // Don't show Topcoder Challenge roles for admin roles
+            if(!$isTopcoderAdmin){
+                $roles =  $this->topcoderProjectRolesText($user, $resources, $roleResources);
+                if($roles) {
+                    $anchorText = $anchorText . '&nbsp;<span class="challengeRoles">('.$roles. ')</span>';
+                }
+            }
         }
     }
 
@@ -759,19 +770,27 @@ class GroupsPlugin extends Gdn_Plugin {
      * @param $args
      */
     public function base_userPhoto_handler($sender, $args){
-        if($sender instanceof DiscussionController || $sender instanceof GroupController) {
+        if($sender instanceof DiscussionController || $sender instanceof GroupController || $sender instanceof PostController) {
             $user = $args['User'];
             $anchorText = &$args['Title'];
+            $isTopcoderAdmin = $args['IsTopcoderAdmin'];
             $resources = $sender->data('ChallengeResources');
             $roleResources = $sender->data('ChallengeRoleResources');
-            $anchorText = $anchorText . $this->topcoderProjectRolesText($user, $resources, $roleResources);
+            // Don't show Topcoder Challenge roles for admin roles
+            if(!$isTopcoderAdmin){
+                $roles =  $this->topcoderProjectRolesText($user, $resources, $roleResources);
+                if($roles) {
+                    $anchorText = $anchorText.'&nbsp;('.$roles. ')';
+                }
+            }
         }
     }
 
     private function topcoderProjectRolesText($user, $resources = null, $roleResources = null) {
        $roles = $this->getTopcoderProjectRoles($user, $resources, $roleResources);
-       return count($roles) > 0 ? '(' . implode(', ', $roles) . ')' : '';
-
+       // FIX: https://github.com/topcoder-platform/forums/issues/476:  Show only Copilot, Reviewer roles
+       $displayedRoles =  array_intersect(array_unique($roles), ["Copilot", "Reviewer"]);
+       return count($displayedRoles) > 0 ? implode(', ', $displayedRoles) : '';
     }
 
     /**
@@ -806,7 +825,7 @@ class GroupsPlugin extends Gdn_Plugin {
     private function addGroupLinkToMenu($sender) {
         if(Gdn::session()->isValid()) {
 
-            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenge Discussions', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
+            echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'challenge').'">'. anchor('Challenge Forums', GroupsPlugin::ROUTE_CHALLENGE_GROUPS).'</li>';
            // echo '<li class="'.$this->getMenuItemCssClassFromQuery($sender, 'regular').'">'. anchor('Group Discussions', GroupsPlugin::ROUTE_REGULAR_GROUPS).'</li>';
            // echo '<li class="'.$this->getMenuItemCssClassFromRequestMethod($sender, 'mine').'">'. anchor('My Challenges & Groups', GroupsPlugin::ROUTE_MY_GROUPS).'</li>';
         }

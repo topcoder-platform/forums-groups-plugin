@@ -112,7 +112,7 @@ class GroupsApiController extends AbstractApiController {
         if (!$group) {
             throw new NotFoundException('Group');
         }
-        return $group;
+        return ApiUtils::convertOutputKeys($group);
     }
 
     /**
@@ -254,7 +254,7 @@ class GroupsApiController extends AbstractApiController {
      * @throws ServerException If the group could not be archived.
      * @return
      */
-    public function put_archive($id, array $body) {
+    public function put_archive($id) {
         $this->permission('Groups.Group.Archive');
         $this->idParamSchema();
 
@@ -266,10 +266,31 @@ class GroupsApiController extends AbstractApiController {
         if(!$this->groupModel->canArchiveGroup($group)) {
             throw new ClientException('Don\'t have permissions to archive this group.');
         }
-
-        $this->groupModel->archiveGroup($group->GroupID);
+        $this->groupModel->archiveGroup($group->GroupID, 1);
     }
 
+    /**
+     * Unarchive a group.
+     *
+     * @param int $id The ID of the group.
+     * @throws NotFoundException if the group could not be found.
+     * @throws ServerException If the group could not be archived.
+     * @return
+     */
+    public function put_unarchive($id) {
+        $this->permission('Groups.Group.Archive');
+        $this->idParamSchema();
+
+        $group = $this->groupModel->getByGroupID($id);
+        if(!$group) {
+            throw new NotFoundException('Group');
+        }
+
+        if(!$this->groupModel->canArchiveGroup($group)) {
+            throw new ClientException('Don\'t have permissions to unarchive this group.');
+        }
+        $this->groupModel->archiveGroup($group->GroupID, 0);
+    }
 
     /**
      * Remove a member from a group
@@ -416,6 +437,17 @@ class GroupsApiController extends AbstractApiController {
     }
 
     /**
+     * Get Group Archive schema.
+     *
+     * @param string $type The type of schema.
+     * @return Schema Returns a schema object.
+     */
+    public function groupArchiveSchema() {
+        return $this->schema(
+            ['archived:b' => 'Archived status'], 'in');
+    }
+
+    /**
      * Get a GroupID/UserID - only conversation record schema.
      *
      * @return Schema Returns a schema object.
@@ -463,6 +495,7 @@ class GroupsApiController extends AbstractApiController {
                 'enum' => [GroupModel::PRIVACY_SECRET, GroupModel::PRIVACY_PUBLIC, GroupModel::PRIVACY_PRIVATE],
                 'description' => 'Privacy of the group'],
             'description:s' => 'Description of the group',
+            'archived:b' => 'The archived state of the group',
             'challengeID:s?' => 'The challengeID of the Topcoder challenge.',
             'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
         ]), 'GroupPost');

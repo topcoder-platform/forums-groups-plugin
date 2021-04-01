@@ -261,6 +261,23 @@ paths:
       requestBody:
         required: false
       summary: Archive a group.
+  '/groups/{id}/unarchive':
+    put:
+      parameters:
+        - description: The group ID.
+          in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Success
+      tags:
+        - Groups
+      requestBody:
+        required: false
+      summary: Unarchive a group.
 components:
   requestBodies:
     GroupPost:
@@ -306,6 +323,9 @@ components:
           enum:
           - challenge
           - regular
+        archived:
+          description: The archived state of the group
+          type: boolean
       required:
       - groupID
       - privacy
@@ -313,6 +333,7 @@ components:
       - name
       - challengeID
       - challengeUrl
+      - archived
       type: object
     GroupPost:
       properties:
@@ -344,6 +365,9 @@ components:
         challengeUrl:
           description: The url of the Topcoder challenge.
           type: string
+        archived:
+          description: The archived state of the group
+          type: boolean
       required:
         - name
         - type
@@ -351,6 +375,7 @@ components:
         - description
         - challengeID
         - challengeUrl
+        - archived
       type: object
     GroupPatch:
       properties:
