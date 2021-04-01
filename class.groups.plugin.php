@@ -338,6 +338,11 @@ class GroupsPlugin extends Gdn_Plugin {
         $this->addGroupLinkToMenu($sender);
     }
 
+    /**
+     * Add/Remove 3 dot category menu items
+     * @param $sender
+     * @param $args
+     */
     public function base_categoryOptionsDropdown_handler($sender, $args) {
         if (!Gdn::session()->isValid()) {
             return ;
@@ -349,6 +354,7 @@ class GroupsPlugin extends Gdn_Plugin {
         // https://github.com/topcoder-platform/forums/issues/125
         $dropdown->removeItem('mark-read');
 
+        /*
         if(val('DisplayAs', $category) == 'Discussions') {
             $categoryModel = new CategoryModel();
             $categoryID = val('CategoryID', $category);
@@ -359,6 +365,7 @@ class GroupsPlugin extends Gdn_Plugin {
                 'watch'
             );
        }
+       */
     }
 
     /**
@@ -402,12 +409,25 @@ class GroupsPlugin extends Gdn_Plugin {
      * @param $args
      */
     public function categoriesController_afterChallenge_handler($sender, $args) {
+        $this->writeAfterChallenge($sender, $args);
+    }
+
+    /**
+     * Add a challenge name and link for each category on /categories page
+     * @param $sender
+     * @param $args
+     */
+    public function watchingController_afterChallenge_handler($sender, $args) {
+        $this->writeAfterChallenge($sender, $args);
+    }
+
+    private function writeAfterChallenge($sender, $args) {
         $category = $args['Category'];
         $groupID = val('GroupID', $category);
         if($groupID) {
-           $group = $this->groupModel->getByGroupID($groupID);
-           $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
-           echo '<span>'.$type.':</span>&nbsp;'.anchor( $group->Name, self::GROUP_ROUTE.$group->GroupID);
+            $group = $this->groupModel->getByGroupID($groupID);
+            $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
+            echo '<span>'.$type.':</span>&nbsp;'.anchor( $group->Name, self::GROUP_ROUTE.$group->GroupID);
         }
     }
 
@@ -481,7 +501,14 @@ class GroupsPlugin extends Gdn_Plugin {
         }
 
         // Return the appropriate bookmark.
-        /// require_once $sender->fetchViewLocation('helper_functions', 'Categories');
+        $userMetaModel = new UserMetaModel();
+        $discussionModel = new DiscussionModel();
+        $CountBookmarks = $discussionModel->userBookmarkCount($userID);
+        $CountWatchedCategories = $userMetaModel->userWatchedCategoriesCount($userID);
+        $TotalCount = $CountBookmarks + $CountWatchedCategories;
+        // FIX: https://github.com/topcoder-platform/forums/issues/479
+        $CountWatchesHtml = myWatchingMenuItem($TotalCount);
+        $sender->jsonTarget('#MyWatching', $CountWatchesHtml, 'ReplaceWith');
         $markup = watchButton($categoryID);
         $sender->jsonTarget("!element", $markup, 'ReplaceWith');
         $sender->render('Blank', 'Utility', 'Dashboard');
@@ -521,6 +548,10 @@ class GroupsPlugin extends Gdn_Plugin {
             $userMetaModel->setUserMeta($userID, $newPopupCommentKey , $watched);
             $userMetaModel->setUserMeta($userID, $newPopupDiscussionKey , $watched);
         }
+
+        $userMetaModel = new UserMetaModel();
+        $userMetaModel->setWatchedCategoriesCount($userID);
+        Gdn::cache()->remove("UserMeta_{$userID}");
         return;// $sender->hasWatched($categoryIDs,$userID);
     }
 

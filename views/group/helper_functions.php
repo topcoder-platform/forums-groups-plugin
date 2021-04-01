@@ -28,6 +28,45 @@ if(!function_exists('getRoleInGroupForCurrentUser')) {
     }
 }
 
+if (!function_exists('watchGroupButton')) {
+    /**
+     *
+     * Writes the Watch/watching button
+     *
+     * @param int $categoryID
+     * @return string
+     */
+    function watchGroupButton($group) {
+        $groupModel = new GroupModel();
+        $canWatch = $groupModel->canWatchGroup($group);
+        $hasWatched = $groupModel->hasWatchedGroup($group);
+        $groupID = $group->GroupID;
+        $output = '';
+        $text = $hasWatched ? t('Stop watching the group') : t('Watch the group');
+
+        if($canWatch && !$hasWatched) {
+            $icon = watchIcon($hasWatched);
+            $output .= anchor(
+                $icon,
+                "/group/watch/{$groupID}/" . Gdn::session()->transientKey(),
+                'Hijack watchButton' . ($hasWatched ? ' isWatching' : ''),
+                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+            );
+
+        } else if($hasWatched) {
+            $icon = watchIcon($hasWatched);
+            $output .= anchor(
+                $icon,
+                "/group/unwatch/{$groupID}/" . Gdn::session()->transientKey(),
+                'Hijack watchButton' . ($hasWatched ? ' isWatching' : ''),
+                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+            );
+        }
+
+        return $output;
+    }
+}
+
 if (!function_exists('getGroupOptionsDropdown')) {
     /**
      * Constructs an options dropdown menu for a group.
@@ -65,8 +104,9 @@ if (!function_exists('getGroupOptionsDropdown')) {
            // ->addLinkIf($canManageMembers, t('Manage Members'), '/group/members/'.$groupID, 'manage')
             ->addLinkIf($canFollow && !$hasFollowed, t('Follow Categories'), '/group/follow/'.$groupID, 'follow','FollowGroup Popup')
             ->addLinkIf($hasFollowed, t('Unfollow Categories'), '/group/unfollow/'.$groupID, 'unfollow', 'UnfollowGroup Popup')
-            ->addLinkIf($canWatch && !$hasWatched, t('Watch Categories'), '/group/watch/'.$groupID, 'watch','WatchGroup Popup')
-            ->addLinkIf($hasWatched, t('Unwatch Categories'), '/group/unwatch/'.$groupID, 'unwatch', 'UnwatchGroup Popup');
+           // ->addLinkIf($canWatch && !$hasWatched, t('Watch Categories'), '/group/watch/'.$groupID, 'watch','WatchGroup Popup')
+          //  ->addLinkIf($hasWatched, t('Unwatch Categories'), '/group/unwatch/'.$groupID, 'unwatch', 'UnwatchGroup Popup')
+        ;
         // Allow plugins to edit the dropdown.
         $sender->EventArguments['GroupOptionsDropdown'] = &$dropdown;
         $sender->EventArguments['Group'] = $group;
@@ -191,7 +231,10 @@ if (!function_exists('writeGroupHeader')) {
      ?>
         <div class="Group-Header <?php echo $bannerCssClass; ?>">
             <div class="GroupOptions OptionsMenu ButtonGroup">
-                <?php echo getGroupOptionsDropdown();?>
+                <?php
+                echo watchGroupButton($group);
+                echo getGroupOptionsDropdown();
+                ?>
             </div>
             <h1 class="Group-Title"><?php echo $group->Name; ?></h1>
             <?php echo writeGroupBanner($group);?>

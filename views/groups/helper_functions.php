@@ -83,7 +83,10 @@ if (!function_exists('writeGroup')) {
             ?>
             <div class="ItemContent Group">
                 <div class="Options">
-                    <?php echo getGroupOptionsDropdown($group);?>
+                    <?php
+                    echo watchGroupButton($group);
+                    echo getGroupOptionsDropdown($group);
+                    ?>
                 </div>
                 <?php
                  echo writeGroupIconWrap($group, 'Item-Icon PhotoWrap PhotoWrap-Category','GroupPhoto');

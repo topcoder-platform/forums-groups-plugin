@@ -1314,7 +1314,8 @@ class GroupModel extends Gdn_Model {
         }
         CategoryModel::clearUserCache($userID);
         Gdn::cache()->remove("UserMeta_{$userID}");
-
+        $userMetaModel = new UserMetaModel();
+        $userMetaModel->setWatchedCategoriesCount($userID);
     }
 
     /**
