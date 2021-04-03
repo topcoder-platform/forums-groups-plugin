@@ -866,8 +866,70 @@ class GroupsPlugin extends Gdn_Plugin {
         return $sender->ControllerName == 'groupscontroller' && $sender->RequestMethod == $requestMethod ? ' Active' : '';
     }
 
+    /**
+     * Change Menu Options of the left nav menu
+     *
+     * @param $sender
+     * @param $args
+     */
+    public function base_beforeRenderDiscussionFilters_handler($sender, $args){
+        $menu = & $args['Menu'];
+        if($menu) {
+            if ($sender instanceof DiscussionController || $sender instanceof  PostController) {
+                $discussion = $sender->data('Discussion');
+                if($discussion) {
+                    $discussionID = val('DiscussionID', $discussion);
+                    $groupModel = new GroupModel();
+                    $groupID = $groupModel->findGroupIDFromDiscussion($discussionID);
+                    if($groupID) {
+                        $menu['AllCategories']['IsActive']  =  false;
+                        return;
+                    }
+                }
+            }
+
+            if ($sender instanceof CategoriesController || $sender instanceof  PostController) {
+                $category = $sender->data('Category');
+                if($category) {
+                    $groupID = val('GroupID', $category);
+                    if($groupID) {
+                        $menu['AllCategories']['IsActive']  =  false;
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
     private function getMenuItemCssClassFromQuery($sender, $requestMethod){
-        return $sender->ControllerName == 'groupscontroller' && Gdn::request()->get('filter') == $requestMethod ? ' Active' : '';
+        $cssClass  = '';
+        if($sender instanceof GroupController || $sender instanceof GroupsController) {
+            $cssClass  =  ' Active';
+        }
+
+        if($sender instanceof DiscussionController || $sender instanceof  PostController) {
+            $discussion = $sender->data('Discussion');
+            if($discussion) {
+                $discussionID = val('DiscussionID', $discussion);
+                $groupModel = new GroupModel();
+                $groupID = $groupModel->findGroupIDFromDiscussion($discussionID);
+                if($groupID) {
+                    $cssClass  =  ' Active';
+                }
+            }
+        }
+
+        if ($sender instanceof CategoriesController || $sender instanceof  PostController) {
+            $category = $sender->data('Category');
+            if($category) {
+                $groupID = val('GroupID', $category);
+                if($groupID) {
+                    $cssClass  =  ' Active';
+                }
+            }
+        }
+
+        return  $cssClass;
     }
 
     public static function logMessage($message, $data =[], $file = __FILE__, $line = __LINE__) {
