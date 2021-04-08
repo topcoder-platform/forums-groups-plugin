@@ -45,7 +45,7 @@ if (!function_exists('watchGroupButton')) {
         $text = $hasWatched ? t('Stop watching the group') : t('Watch the group');
 
         if($canWatch && !$hasWatched) {
-            $icon = watchIcon($hasWatched);
+            $icon = watchIcon($hasWatched, $text);
             $output .= anchor(
                 $icon,
                 "/group/watch/{$groupID}/" . Gdn::session()->transientKey(),
@@ -54,7 +54,7 @@ if (!function_exists('watchGroupButton')) {
             );
 
         } else if($hasWatched) {
-            $icon = watchIcon($hasWatched);
+            $icon = watchIcon($hasWatched,$text);
             $output .= anchor(
                 $icon,
                 "/group/unwatch/{$groupID}/" . Gdn::session()->transientKey(),
