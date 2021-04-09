@@ -759,21 +759,10 @@ span.file-upload-choose, span.file-upload-browse {
 }
 
 .watchButton {
-    white-space: nowrap;
-    font-size: 10px;
-    text-transform: uppercase;
+    padding: 0px 5px;
     vertical-align: middle;
-    font-weight: 400;
-    padding: 0 5px;
-    text-decoration: none;
-}
-.watchButton.isWatching:not(:hover) {
-    opacity: 0.7;
 }
 
-.watchButton-icon {
-    width: 14px;
-    height: 14px;
-    margin-right: 5px;
-    vertical-align: sub;
+.watchButton.isWatching {
+    padding: 3px 5px;
 }

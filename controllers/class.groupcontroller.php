@@ -517,12 +517,25 @@ class GroupController extends VanillaController {
         if ($this->Form->authenticatedPostBack(true)) {
             $this->GroupModel->watchGroup($Group, Gdn::session()->UserID);
             // Stay in the previous page
-            if(isset($_SERVER['HTTP_REFERER'])) {
-                $previous = $_SERVER['HTTP_REFERER'];
-                $this->setRedirectTo($previous);
-            } else {
-                $this->setRedirectTo('group/'.$GroupID);
-            }
+            // if(isset($_SERVER['HTTP_REFERER'])) {
+            //    $previous = $_SERVER['HTTP_REFERER'];
+            //    $this->setRedirectTo($previous);
+            //} else {
+            //    $this->setRedirectTo('group/'.$GroupID);
+           // }
+            $userMetaModel = new UserMetaModel();
+            $discussionModel = new DiscussionModel();
+            $CountBookmarks = $discussionModel->userBookmarkCount(Gdn::session()->UserID);
+            $CountWatchedCategories = $userMetaModel->userWatchedCategoriesCount(Gdn::session()->UserID);
+            $TotalCount = $CountBookmarks + $CountWatchedCategories;
+            // FIX: https://github.com/topcoder-platform/forums/issues/479
+            $CountWatchesHtml = myWatchingMenuItem($TotalCount);
+            include_once $this->fetchViewLocation('helper_functions', 'group');
+            $this->jsonTarget('#MyWatching', $CountWatchesHtml, 'ReplaceWith');
+
+            $markup = watchGroupButton($Group);
+            $this->jsonTarget("!element", $markup, 'ReplaceWith');
+
         }
         $this->render();
     }
@@ -542,12 +555,25 @@ class GroupController extends VanillaController {
         if ($this->Form->authenticatedPostBack(true)) {
             $this->GroupModel->unwatchGroup($Group, Gdn::session()->UserID);
             // Stay in the previous page
-            if(isset($_SERVER['HTTP_REFERER'])) {
-                $previous = $_SERVER['HTTP_REFERER'];
-                $this->setRedirectTo($previous);
-            } else {
-                $this->setRedirectTo('group/'.$GroupID);
-            }
+            // if(isset($_SERVER['HTTP_REFERER'])) {
+            //     $previous = $_SERVER['HTTP_REFERER'];
+            //     $this->setRedirectTo($previous);
+            // } else {
+            //     $this->setRedirectTo('group/'.$GroupID);
+            // }
+            $userMetaModel = new UserMetaModel();
+            $discussionModel = new DiscussionModel();
+            $CountBookmarks = $discussionModel->userBookmarkCount(Gdn::session()->UserID);
+            $CountWatchedCategories = $userMetaModel->userWatchedCategoriesCount(Gdn::session()->UserID);
+            $TotalCount = $CountBookmarks + $CountWatchedCategories;
+            // FIX: https://github.com/topcoder-platform/forums/issues/479
+            $CountWatchesHtml = myWatchingMenuItem($TotalCount);
+            include_once $this->fetchViewLocation('helper_functions', 'group');
+            $this->jsonTarget('#MyWatching', $CountWatchesHtml, 'ReplaceWith');
+
+            $markup = watchGroupButton($Group);
+            $this->jsonTarget("!element", $markup, 'ReplaceWith');
+          //  $this->render('Blank', 'Utility', 'Dashboard');
         }
         $this->render();
     }
@@ -630,6 +656,7 @@ class GroupController extends VanillaController {
                 // $this->View = 'index';
                 break;
         }
+
         //Gdn_Theme::section('Group');
 
         // Remove score sort
