@@ -9,18 +9,19 @@ if(!function_exists('writeDiscussion')) {
 $Session = Gdn::session();
 $Group = $this->data('Group');
 $Owner = Gdn::userModel()->getID($Group->OwnerID);
-$Leaders = $this->data('Leaders');
-$Members = $this->data('Members');
+// $Leaders = $this->data('Leaders');
+// $Members = $this->data('Members');
+$Copilots = $this->data('Copilots');
 $Discussions = $this->data('Discussions');
 $Announcements = $this->data('Announcements');
-$TotalMembers = $this->data('TotalMembers');
+// $TotalMembers = $this->data('TotalMembers');
 $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
 $groupModel = new GroupModel();
 $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProjectRoles');
 //$groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
 
 ?>
-<?php echo writeGroupHeader($Group, true, $Owner, $Leaders, $TotalMembers);?>
+<?php echo writeGroupHeader($Group, true, $Owner);?>
 
 <div class="Group-Content">
     <div class="Group-Box Group-Announcements Section-DiscussionList">
@@ -73,20 +74,19 @@ $currentTopcoderProjectRoles = Gdn::controller()->data('ChallengeCurrentUserProj
         <?php } ?>
 
     </div>
-    <div class="Group-Info ClearFix clearfix">
-        <div class="Group-Box Group-MembersPreview">
-                <div class="PageControls">
-                    <h1 class="Groups H">Members</h1>
-                </div>
-                <?php if(count($Members) > 0 ) { ?>
-                <div class="PhotoGrid PhotoGridSmall">
-                    <?php echo writeGroupMembersWithPhoto($Members); ?>
-                    <?php echo anchor('All Members',allMembersUrl($this->data('Group')), 'MoreWrap');?>
-                </div>
-                <?php }  else  {
-                    echo '<div class="EmptyMessage">There are no members.</div>';
-                }?>
-        </div>
-    </div>
+    <?php
+       // echo '<div class="Group-Info ClearFix clearfix"><div class="Group-Box Group-MembersPreview"> <div class="PageControls">'.
+       // '<h1 class="Groups H">Members</h1></div>';
+       // if(count($Members) > 0 ) {
+       // echo '<div class="PhotoGrid PhotoGridSmall">'
+       // echo writeGroupMembersWithPhoto($Members);
+       // echo anchor('All Members',allMembersUrl($this->data('Group')), 'MoreWrap');
+       // echo '</div>'
+       // }  else  {
+       //     echo '<div class="EmptyMessage">There are no members.</div>';
+       // }
+       // echo '</div></div>';
+    ?>
 </div>
+<?php echo writeGroupMetaData($Group,  $Owner, $Copilots);?>
 
