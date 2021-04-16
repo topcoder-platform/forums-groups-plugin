@@ -88,11 +88,10 @@ class GroupController extends VanillaController {
         $this->title($Group->Name);
 
         $this->setData('Breadcrumbs', $this->buildBreadcrumb($Group));
-      //  $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
-        $this->setData('TotalMembers', $this->GroupModel->countOfMembers($GroupID));
-        $this->setData('Leaders', $this->GroupModel->getLeaders($GroupID));
-        $this->setData('Members', $this->GroupModel->getMembers($GroupID,[],'',30,0));
-
+        $roleResources = $this->data('ChallengeRoleResources');
+        $resources = $this->data('ChallengeResources');
+        $copilots = $this->getCopilots($resources, $roleResources);
+        $this->setData('Copilots', $copilots);
         $groupDiscussions =  $this->GroupModel->getGroupDiscussionCategories($Group);
         $defaultDiscussionUrl = '/post/discussion/';
         if($Group->Type == GroupModel::TYPE_REGULAR) {
@@ -126,6 +125,25 @@ class GroupController extends VanillaController {
         $this->setData('Announcements', $announcements);
         $this->setData('Discussions', $discussions);
         $this->render();
+    }
+
+    private function getCopilots($resources = null, $roleResources = null) {
+        $copilots = [];
+        $roleName = 'copilot';
+        if (isset($resources) && isset($roleResources)) {
+            $copilotRoleResources = array_filter($roleResources, function ($k) use ($roleName) {
+                return $roleName == strtolower($k->name);
+            });
+
+            $copilotRoleResource = reset($copilotRoleResources);
+            $memberResources = array_filter($resources, function ($k) use ($copilotRoleResource) {
+                return $k->roleId == $copilotRoleResource->id;
+            });
+            foreach ($memberResources as $memberResourceId => $memberResource) {
+                array_push($copilots, $memberResource->memberHandle);
+            }
+        }
+        return array_unique($copilots);
     }
 
     /**
@@ -252,11 +270,12 @@ class GroupController extends VanillaController {
 
 
     /**
-     * Create new group.
+     * The list of members
      *
-     * @since 2.0.0
-     * @access public
      */
+    // FIX: https://github.com/topcoder-platform/forums/issues/561
+    // Hide members endpoint and view
+    /*
     public function members($GroupID = '',$Page = false) {
 
         $this->allowJSONP(true);
@@ -317,6 +336,7 @@ class GroupController extends VanillaController {
 
         $this->render();
     }
+     */
 
     /**
      * Remove a member from a group
