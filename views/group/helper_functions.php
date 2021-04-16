@@ -246,17 +246,22 @@ if (!function_exists('writeGroupHeader')) {
                     <?php echo writeGroupIcon($group, '', 'Group-Icon Group-Icon-Big');?>
                 </div>
             <?php }?>
-            <?php if($showDetails) { ?>
             <div class="Group-Info">
+                <?php if(!$group->Archived) { ?>
                 <div class="Group-Description"><?php
                      $isMarkdownFormatter = strcasecmp(Gdn_Format::defaultFormat(), MarkdownFormat::FORMAT_KEY) === 0;
-
                      $text = $isMarkdownFormatter? Gdn_Format::to($group->Description,  MarkdownFormat::FORMAT_KEY):
                           $group->Description;
                      echo $text ;
                     ?></div>
+            <?php } else {?>
+                <div class="Group-Archived"><?php
+                    $challengeAnchor  = $group->ChallengeUrl? anchor('challenge', $group->ChallengeUrl,'', ['target' => 'blank']):'challenge';
+                    echo '<span class="Archived">Archived</span><span>This '.$challengeAnchor.' forum has been archived.</span> ';
+                    ?>
+                </div>
+           <?php } ?>
             </div>
-           <?php }?>
         </div>
 
         <?php
@@ -265,7 +270,7 @@ if (!function_exists('writeGroupHeader')) {
 if (!function_exists('writeGroupMetaData')) {
     function writeGroupMetaData($group, $owner = null, $copilots=null) {
     ?>
-    <div class="Group-Header">
+    <div class="Group-Footer">
         <div class="Group-Info">
             <div class="Meta Group-Meta Table">
                 <div class="MItem TableRow">
