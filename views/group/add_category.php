@@ -1,5 +1,5 @@
 <?php if (!defined('APPLICATION')) exit(); ?>
-<h1><?php echo t('Add New Category'); ?></h1>
+<h1><?php echo t('Add'); ?></h1>
 <?php
 $Group = $this->data('Group');
 echo $this->Form->open();
@@ -7,7 +7,7 @@ echo $this->Form->errors();
 ?>
 <div class="Wrap">
     <?php
-    echo '<div class="P">Are you sure you want to add a new category to \''. $Group->Name.'\'?</div>';
+    echo '<div class="P Message">Are you sure you want to add a new category?</div>';
     echo '<div class="P">';
     echo $this->Form->label('Category Name', 'Name');
     echo wrap($this->Form->textBox('Name', ['maxlength' => 255, 'class' => 'InputBox']), 'div', ['class' => 'TextBoxWrapper']);
