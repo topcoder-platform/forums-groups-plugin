@@ -781,15 +781,16 @@ class GroupsPlugin extends Gdn_Plugin {
         if($sender instanceof DiscussionController || $sender instanceof GroupController || $sender instanceof PostController) {
             $user = $args['User'];
             $isTopcoderAdmin = $args['IsTopcoderAdmin'];
+            $hideRoles = isset($args['HideRoles'])? $args['HideRoles']: false;
             $anchorText = &$args['Text'];
             $resources = $sender->data('ChallengeResources');
             $roleResources = $sender->data('ChallengeRoleResources');
             $anchorText = '<span class="topcoderHandle">'.$anchorText.'</span>';
             // Don't show Topcoder Challenge roles for admin roles
-            if(!$isTopcoderAdmin){
-                $roles =  $this->topcoderProjectRolesText($user, $resources, $roleResources);
-                if($roles) {
-                    $anchorText = $anchorText . '&nbsp;<span class="challengeRoles">('.$roles. ')</span>';
+            if(!$isTopcoderAdmin && !$hideRoles) {
+                $roles = $this->topcoderProjectRolesText($user, $resources, $roleResources);
+                if ($roles) {
+                    $anchorText = $anchorText . '&nbsp;<span class="challengeRoles">(' . $roles . ')</span>';
                 }
             }
         }

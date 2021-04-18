@@ -1,4 +1,6 @@
-<?php if (!defined('APPLICATION')) exit();
+<?php use Vanilla\Formatting\Formats\MarkdownFormat;
+
+if (!defined('APPLICATION')) exit();
 
 if (!function_exists('getGroupUrl')) :
     function getGroupUrl($group) {
@@ -71,7 +73,12 @@ if (!function_exists('writeGroup')) {
         $cssClass = cssClass($group);
         $groupUrl = getGroupUrl($group);
         $groupName = $group->Name;
+        $isMarkdownFormatter = strcasecmp(Gdn_Format::defaultFormat(), MarkdownFormat::FORMAT_KEY) === 0;
         $groupDesc = $group->Description;
+        if($isMarkdownFormatter) {
+            $groupDesc = Gdn_Format::to($groupDesc, MarkdownFormat::FORMAT_KEY);
+            $groupDesc = preg_replace('/<br\\s*?\/??>/i', "", $groupDesc);
+        }
         $wrapCssClass = $group->Icon ? 'hasPhotoWrap':'noPhotoWrap';
         ?>
         <li id="Group_<?php echo $group->GroupID; ?>" class="<?php echo $cssClass.' '.$wrapCssClass; ?> ">

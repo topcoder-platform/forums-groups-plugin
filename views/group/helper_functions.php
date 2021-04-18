@@ -1,4 +1,7 @@
-<?php if (!defined('APPLICATION')) exit();
+<?php use Vanilla\Formatting\DateTimeFormatter;
+use Vanilla\Formatting\Formats\MarkdownFormat;
+
+if (!defined('APPLICATION')) exit();
 
 if (!function_exists('allMembersUrl')) {
     /**
@@ -243,51 +246,72 @@ if (!function_exists('writeGroupHeader')) {
                     <?php echo writeGroupIcon($group, '', 'Group-Icon Group-Icon-Big');?>
                 </div>
             <?php }?>
-                <?php if($showDetails) { ?>
             <div class="Group-Info">
-                <div class="Group-Description"><?php  echo  $group->Description; ?></div>
-                <div class="Meta Group-Meta Table">
-                    <?php if($group->ChallengeUrl) { ?>
-                    <div class="MItem TableRow">
-                        <div class="TableCell Cell1">Challenge</div>
-                        <div class="TableCell Cell2"><?php echo anchor($group->Name, $group->ChallengeUrl);?></div>
-                    </div>
-                    <?php } ?>
-                    <div class="MItem TableRow">
-                        <div class="TableCell Cell1">Owner</div>
-                        <div class="TableCell Cell2"><?php echo userAnchor($owner, 'Username');?></div>
-                    </div>
-                    <div class="MItem TableRow">
-                        <div class="TableCell Cell1">Leaders</div>
-                        <div class="TableCell Cell2">
-                            <?php echo writeGroupMembers($leaders, ','); ?>
-                        </div>
-                    </div>
-                    <div class="MItem TableRow">
-                        <div class="TableCell Cell1">Member(s)</div>
-                        <div class="TableCell Cell2"><?php  echo  $totalMembers; ?></div>
-                    </div>
-
-                    <div class="MItem TableRow">
-                        <div class="TableCell Cell1">Created on</div>
-                        <div class="TableCell Cell2"><?php  echo  $group->DateInserted; ?></div>
-                    </div>
-                    <div class="MItem TableRow">
-                        <div class="TableCell Cell1">Privacy</div>
-                        <div class="TableCell Cell2"><?php  echo  $group->Privacy; ?></div>
-                    </div>
-                    <div class="MItem TableRow Last">
-                        <div class="TableCell Cell1">Archived</div>
-                        <div class="TableCell Cell2"><?php  echo  $group->Archived == 1? 'yes': 'no'; ?></div>
-                    </div>
+                <?php if(!$group->Archived) { ?>
+                <div class="Group-Description"><?php
+                     $isMarkdownFormatter = strcasecmp(Gdn_Format::defaultFormat(), MarkdownFormat::FORMAT_KEY) === 0;
+                     $text = $isMarkdownFormatter? Gdn_Format::to($group->Description,  MarkdownFormat::FORMAT_KEY):
+                          $group->Description;
+                     echo $text ;
+                    ?></div>
+            <?php } else {?>
+                <div class="Group-Archived"><?php
+                    $challengeAnchor  = $group->ChallengeUrl? anchor('challenge', $group->ChallengeUrl,'', ['target' => 'blank']):'challenge';
+                    echo '<span class="Archived">Archived</span><span>This '.$challengeAnchor.' forum has been archived.</span> ';
+                    ?>
                 </div>
+           <?php } ?>
             </div>
-           <?php }?>
         </div>
 
         <?php
     }
 }
-?>
+if (!function_exists('writeGroupMetaData')) {
+    function writeGroupMetaData($group, $owner = null, $copilots=null) {
+    ?>
+    <div class="Group-Footer">
+        <div class="Group-Info">
+            <div class="Meta Group-Meta Table">
+                <div class="MItem TableRow">
+                    <div class="TableCell Cell1">
+                        <span class="MLabel">Author</span>
+                        <span class="MValue"><?php echo userAnchor($owner, 'Username');?></span>
+                    </div>
+                    <div class="TableCell Cell2">
+                        <span class="MLabel">Copilot</span>
+                        <span class="MValue">
+                            <?php
+                                $copilotAnchors = [];
+                                foreach ($copilots as $copilot) {
+                                    $user = Gdn::userModel()->getByUsername($copilot);
+                                    array_push($copilotAnchors, userAnchor($user, null, ['HideRoles'=> true]));
+                                }
+                                echo implode(', ', $copilotAnchors);
+                            ?>
+                        </span>
+                    </div>
+                </div>
+                <div class="MItem TableRow Last">
+                    <div class="TableCell Cell1">
+                        <span class="MLabel">Privacy</span>
+                        <span class="MValue"><?php  echo  $group->Privacy; ?></span>
+                    </div>
+                    <div class="TableCell Cell2">
+                        <span class="MLabel">Date Created</span>
+                        <span class="MValue"><?php
+                            $dateFormatted = Gdn::getContainer()->get(DateTimeFormatter::class)->formatDate($group->DateInserted, false, '%d %B %Y');
+                            $timeFormatted = Gdn::getContainer()->get(DateTimeFormatter::class)->formatDate($group->DateInserted, false, '%I:%M %p');
+                            echo $dateFormatted.', '.$timeFormatted;
+                            ?></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+        <?php
+    }
+}
+
 
 
