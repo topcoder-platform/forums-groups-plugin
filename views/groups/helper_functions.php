@@ -1,4 +1,5 @@
-<?php use Vanilla\Formatting\Formats\MarkdownFormat;
+<?php use Vanilla\Formatting\DateTimeFormatter;
+use Vanilla\Formatting\Formats\MarkdownFormat;
 
 if (!defined('APPLICATION')) exit();
 
@@ -104,6 +105,29 @@ if (!function_exists('writeGroup')) {
                 <div class="Description">
                     <?php echo $groupDesc;  ?>
                 </div>
+                <div class="Meta Meta-Group GroupLastDiscussionComment">
+                    <?php
+                    $last = userBuilder($group, 'LastDiscussionCommentsUser');
+                    $lastDate = val('LastDiscussionCommentsDate', $group);
+                    if ($group->LastDiscussionCommentsUserUserID != '') {
+                        $dateFormatted = Gdn::getContainer()->get(DateTimeFormatter::class)->formatDate($lastDate, false, '%a, %b %e %Y');
+                        $timeFormatted = Gdn::getContainer()->get(DateTimeFormatter::class)->formatDate($lastDate, false, '%I:%M %p');
+                        echo '<span class="MItem LastCommentBy">'.sprintf(t('Most recent by %1$s on %2$s at %3$s'), userAnchor($last),$dateFormatted, $timeFormatted).'</span>';
+                    }
+                    ?>
+                    <span class="MItem fill-remaining-space"></span>
+                    <span class="MItem MCount ViewCount"><?php
+                        printf(pluralTranslate($group->CountAllDiscussions,
+                            '%s view html', '%s views html', t('%s discussion'), t('%s discussions')),
+                            bigPlural($group->CountAllDiscussions, '%s discussions'));
+                        ?></span>
+                    <span class="MItem MiddleDot">&#183;</span>
+                    <span class="MItem MCount CommentCount"><?php
+                        printf(pluralTranslate($group->CountAllComments,
+                            '%s comment html', '%s comments html', t('%s comment'), t('%s comments')),
+                            bigPlural($group->CountAllComments, '%s comments'));
+                        ?></span>
+                 </div>
             </div>
         </li>
     <?php

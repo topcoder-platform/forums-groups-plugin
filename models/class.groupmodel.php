@@ -71,8 +71,8 @@ class GroupModel extends Gdn_Model {
      *   `['field1' => 'direction', 'field2' => 'direction']`
      */
     protected static $allowedSorts = [
-        'new' => ['key' => 'new', 'name' => 'New', 'orderBy' => ['g.DateInserted' => 'desc']],
-        'old' => ['key' => 'new', 'name' => 'Old', 'orderBy' => ['g.DateInserted' => 'asc']]
+        'new' => ['key' => 'new', 'name' => 'New', 'orderBy' => ['c.LastDiscussionCommentsDate' => 'desc']],
+        'old' => ['key' => 'old', 'name' => 'Old', 'orderBy' => ['c.LastDiscussionCommentsDate' => 'asc']]
     ];
 
     /**
@@ -185,9 +185,9 @@ class GroupModel extends Gdn_Model {
      */
     public static function getDefaultSort() {
         // Try to find a matching sort.
-        foreach (self::getAllowedSorts() as $sort) {
-            if (val('key', $sort, []) == self::DEFAULT_SORT_KEY) {
-                return $sort;
+        foreach (self::getAllowedSorts() as $sorting) {
+            if (val('key', $sorting) == self::DEFAULT_SORT_KEY) {
+                return $sorting;
             }
         }
 
@@ -753,12 +753,18 @@ class GroupModel extends Gdn_Model {
         $sql = $this->SQL;
 
         // Build up the base query. Self-join for optimization.
-        $sql->select('g.*, ug.Role, ug.DateInserted')
+        $sql->select('g.*, ug.Role, ug.DateInserted, c.CategoryID, c.CountAllComments, c.CountAllDiscussions,c.LastDiscussionCommentsDate,
+        c.LastDiscussionCommentsDiscussionID, c.LastDiscussionID, c.LastCommentID')
+            ->select('c.LastDiscussionCommentsUserID', '', 'LastDiscussionCommentsUserUserID')
+            ->select('lcu1.Name', '', 'LastDiscussionCommentsUserName')
+            ->select('lcu1.Photo', '', 'LastDiscussionCommentsUserPhoto')
+            ->select('lcu1.Email', '', 'LastDiscussionCommentsUserEmail')
             ->from('Group g')
             ->join('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
+            ->join('Category c', 'c.GroupID=g.GroupID and c.DisplayAs ="Categories"')
+            ->join('User lcu1', 'c.LastDiscussionCommentsUserID = lcu1.UserID')// Last post/comment inserted/edited by user
             ->where('g.Archived' , 0 )
             ->where($where);
-
 
         foreach ($orderFields as $field => $direction) {
             $sql->orderBy($field, $direction);
@@ -768,10 +774,80 @@ class GroupModel extends Gdn_Model {
 
 
         $data = $sql->get();
+
+        GroupModel::joinRecentPosts($data);
         return $data;
     }
 
+    /**
+     *
+     *
+     * @param $data
+     * @param null $categoryID
+     * @return bool
+     */
+    public static function joinRecentPosts(&$data) {
+        $discussionIDs = [];
+        $commentIDs = [];
+        $joined = false;
 
+        foreach ($data as &$row) {
+            $discussionID =  val('LastDiscussionID', $row);
+            $commentID =  val('LastCommentID', $row);
+            if ($discussionID) {
+                $discussionIDs[] = $discussionID;
+            }
+
+            if ($commentID) {
+                $commentIDs[] = $commentID;
+            }
+            $joined = true;
+        }
+
+        // Create a fresh copy of the Sql object so as not to pollute.
+        $sql = clone Gdn::sql();
+        $sql->reset();
+
+        $discussions = null;
+
+        // Grab the discussions.
+        if (count($discussionIDs) > 0) {
+            $discussions = $sql->whereIn('DiscussionID', $discussionIDs)->get('Discussion')->resultArray();
+            $discussions = Gdn_DataSet::index($discussions, ['DiscussionID']);
+        }
+
+        if (count($commentIDs) > 0) {
+            $comments = $sql->whereIn('CommentID', $commentIDs)->get('Comment')->resultArray();
+            $comments = Gdn_DataSet::index($comments, ['CommentID']);
+        }
+
+        foreach ($data as &$row) {
+            $discussionID =  val('LastDiscussionID', $row);
+            $commentID =  val('LastCommentID', $row);
+            $discussion = val($discussionID, $discussions);
+            if ($discussion) {
+                $row->LastTitle = Gdn_Format::text($discussion['Name']);
+                $row->LastUserID = $discussion['InsertUserID'];
+                $row->LastDiscussionUserID = $discussion['InsertUserID'];
+                $row->LastDateInserted = $discussion['DateInserted'];
+                $row->LastUrl = discussionUrl($discussion, false, '/').'#latest';
+            }
+            if (!empty($comments) && ($comment = val($commentID, $comments))) {
+                $row->LastUserID = $comment['InsertUserID'];
+                $row->LastDateInserted = $comment['DateInserted'];
+                $row->DateLastComment = $comment['DateInserted'];
+            } else {
+                $row->NoComment = true;
+            }
+
+            touchValue('LastTitle', $row, '');
+            touchValue('LastUserID', $row, null);
+            touchValue('LastDiscussionUserID', $row, null);
+            touchValue('LastDateInserted', $row, null);
+            touchValue('LastUrl', $row, null);
+        }
+        return $joined;
+    }
     /**
      * Get count of the groups fir the current user
      */

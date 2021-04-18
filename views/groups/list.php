@@ -11,7 +11,8 @@ include_once $this->fetchViewLocation('helper_functions');
         $PagerOptions['Url'] = $this->data('_PagerUrl');
     }
     echo '<div class="PageControls">';
-        PagerModule::write($PagerOptions);
+    echo groupSorts();
+    PagerModule::write($PagerOptions);
     echo '</div>';
 
     if ($this->data('Groups')->numRows() > 0 ) {
