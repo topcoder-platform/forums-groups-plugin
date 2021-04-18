@@ -888,6 +888,10 @@ class GroupModel extends Gdn_Model {
      * @return boolean Returns **true** if the user has permission or **false** otherwise.
      */
     public static function checkPermission($userID,$groupID,$categoryID = null, $permissionCategoryID = null, $permissions = null, $fullMatch = true, $groupIDs = []){
+        if ($userID == 0) {
+            return false;
+        }
+
         if($userID === Gdn::session()->UserID) {
             $userPermissions = Gdn::session()->getPermissions();
         } else {
