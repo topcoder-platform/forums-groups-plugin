@@ -295,7 +295,14 @@ if (!function_exists('writeGroupMetaData')) {
                 <div class="MItem TableRow Last">
                     <div class="TableCell Cell1">
                         <span class="MLabel">Privacy</span>
-                        <span class="MValue"><?php  echo  $group->Privacy; ?></span>
+                        <span class="MValue"><?php
+                            $challenge = gdn::controller()->data('Challenge');
+                            if($challenge &&  $challenge['ChallengeID'] == $group->ChallengeID) {
+                                echo $challenge['IsNDA'] == true ? 'NDA Required' : 'Public';
+                            } else {
+                                echo '';
+                            }
+                            ?></span>
                     </div>
                     <div class="TableCell Cell2">
                         <span class="MLabel">Date Created</span>
