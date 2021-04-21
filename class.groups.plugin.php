@@ -601,6 +601,43 @@ class GroupsPlugin extends Gdn_Plugin {
         return false;
     }
 
+    /**
+     * Get user notification preferences
+     *
+     * @param $userID
+     * @param $categoryIDs array|int
+     * @return array The list of categories with all preference keys.
+     */
+    public function categoryModel_getCategoryNotificationPreferences_create(CategoryModel $sender) {
+        $categoryIDs = val(0, $sender->EventArguments);
+        $userID = val(1, $sender->EventArguments);
+
+        if(is_numeric($categoryIDs) ) {
+            $categoryIDs = [$categoryIDs];
+        }
+        $result = [];
+        $userMetaModel = new UserMetaModel();
+        foreach ($categoryIDs as $categoryID) {
+            // need to cast to int, by default all values are strings
+            $newEmailDiscussionKey = 'Preferences.Email.NewDiscussion.' . $categoryID;
+            $newEmailDiscussionValue = $userMetaModel->getUserMeta($userID, $newEmailDiscussionKey, null);
+            $result[$categoryID][$newEmailDiscussionKey] = $newEmailDiscussionValue[$newEmailDiscussionKey];
+
+            $newEmailCommentKey = 'Preferences.Email.NewComment.' . $categoryID;
+            $newEmailCommentValue = $userMetaModel->getUserMeta($userID, $newEmailCommentKey, null);
+            $result[$categoryID][$newEmailCommentKey] = $newEmailCommentValue[$newEmailCommentKey];
+
+            $newPopupDiscussionKey = 'Preferences.Popup.NewDiscussion.' . $categoryID;
+            $newPopupDiscussionValue = $userMetaModel->getUserMeta($userID, $newPopupDiscussionKey, null);
+            $result[$categoryID][$newPopupDiscussionKey] = $newPopupDiscussionValue[$newPopupDiscussionKey];
+
+            $newPopupCommentKey = 'Preferences.Popup.NewComment.' . $categoryID;
+            $newPopupCommentValue = $userMetaModel->getUserMeta($userID, $newPopupCommentKey, null);
+            $result[$categoryID][$newPopupCommentKey] = $newPopupCommentValue[$newPopupCommentKey];
+        }
+        return $result;
+    }
+
     //
     // EMAIL TEMPLATES
     //
