@@ -533,7 +533,7 @@ class GroupsPlugin extends Gdn_Plugin {
     public function categoryModel_setCategoryMetaData_create(CategoryModel $sender) {
         $categoryIDs = val(0, $sender->EventArguments);
         $userID = val(1, $sender->EventArguments);
-        $watched = val(2, $sender->EventArguments);
+        $watched = val(2, $sender->EventArguments); // 1, 2- partly watched, null- remove
         $userMetaModel = new UserMetaModel();
         if(is_numeric($categoryIDs) ) {
             $categoryIDs = [$categoryIDs];
@@ -552,7 +552,13 @@ class GroupsPlugin extends Gdn_Plugin {
         $userMetaModel = new UserMetaModel();
         $userMetaModel->setWatchedCategoriesCount($userID);
         Gdn::cache()->remove("UserMeta_{$userID}");
-        return;// $sender->hasWatched($categoryIDs,$userID);
+
+        $discussionModel = new DiscussionModel();
+        // Don't change bookmark flag in UserDiscussion
+        if($watched != 2) {
+            $discussionModel->bookmarkAll($categoryIDs, $userID, $watched == 1 ? 1 : 0);
+        }
+        return;
     }
 
     /**
