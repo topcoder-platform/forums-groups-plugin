@@ -72,9 +72,14 @@ $ViewLocation = $this->fetchViewLocation('discussions', 'discussions', 'vanilla'
 
             $this->Category = $Category;
             $this->DiscussionData = $this->CategoryDiscussionData[$Category->CategoryID];
+            $showCategory = $this->Category->DisplayAs == 'Discussions';
+
+            if(!$showCategory) {
+                continue;
+            }
 ?>
              <div class="Group-Box Group-Discussions Section-DiscussionList">
-              <?php if ($this->DiscussionData->numRows() > 0) { ?>
+              <?php if ($this->DiscussionData->numRows() >= 0) { ?>
 
                   <h1 class="H"><?php
                       echo $Category->CategoryID == $GroupCategoryID? 'Discussions': htmlspecialchars($Category->Name);
@@ -89,17 +94,21 @@ $ViewLocation = $this->fetchViewLocation('discussions', 'discussions', 'vanilla'
                           ?>
                       </div>
                     </div>
+                  <?php if ($this->DiscussionData->numRows() > 0) {?>
                     <ul class="DataList Discussions">
                         <?php include($this->fetchViewLocation('discussions', 'discussions', 'vanilla')); ?>
                     </ul>
 
+                   <?php } else { ?>
+                      <div class="EmptyMessage">No discussions were found.</div>
+                    <?php }  ?>
                     <?php if ($this->DiscussionData->numRows() == $this->DiscussionsPerCategory) : ?>
                         <div class="MorePager">
                             <?php echo anchor(t('More Discussions'), '/categories/'.$Category->UrlCode); ?>
                         </div>
                     <?php endif; ?>
 
-            <?php } ?>
+            <?php }  ?>
              </div>
         <?php endforeach; ?>
     <?php endif; ?>
