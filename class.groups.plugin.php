@@ -929,8 +929,9 @@ class GroupsPlugin extends Gdn_Plugin {
             if ($sender instanceof CategoriesController || $sender instanceof  PostController) {
                 $category = $sender->data('Category');
                 if($category) {
-                    $groupID = val('GroupID', $category);
-                    if($groupID) {
+                    $categoryID = val('CategoryID', $category);
+                    $isChallengeForums  = $sender->checkChallengeForums($categoryID);
+                    if($isChallengeForums) {
                         $menu['AllCategories']['IsActive']  =  false;
                         return;
                     }
@@ -960,8 +961,9 @@ class GroupsPlugin extends Gdn_Plugin {
         if ($sender instanceof CategoriesController || $sender instanceof  PostController) {
             $category = $sender->data('Category');
             if($category) {
-                $groupID = val('GroupID', $category);
-                if($groupID) {
+                $categoryID = val('CategoryID', $category);
+                $isChallengeForums  = $sender->checkChallengeForums($categoryID);
+                if($isChallengeForums) {
                     $cssClass  =  ' Active';
                 }
             }
