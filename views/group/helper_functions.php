@@ -53,7 +53,7 @@ if (!function_exists('watchGroupButton')) {
                 $icon,
                 "/group/watch/{$groupID}/" . Gdn::session()->transientKey(),
                 'Hijack watchButton ' . ($hasWatched ? ' isWatching tooltip' : 'tooltip'),
-                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+                [ 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
             );
 
         } else if($hasWatched) {
@@ -62,7 +62,7 @@ if (!function_exists('watchGroupButton')) {
                 $icon,
                 "/group/unwatch/{$groupID}/" . Gdn::session()->transientKey(),
                 'Hijack watchButton ' . ($hasWatched ? ' isWatching tooltip' : 'tooltip'),
-                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+                ['aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
             );
         }
 
