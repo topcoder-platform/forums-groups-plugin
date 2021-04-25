@@ -45,24 +45,24 @@ if (!function_exists('watchGroupButton')) {
         $hasWatched = $groupModel->hasWatchedGroup($group);
         $groupID = $group->GroupID;
         $output = '';
-        $text = $hasWatched ? t('Stop watching the group') : t('Watch the group');
+        $text = $hasWatched ? t('Stop watching forum') : t('Watch forum');
 
         if($canWatch && !$hasWatched) {
-            $icon = watchIcon($hasWatched, $text);
+            $icon = '<span class="tooltiptext">'.$text.'</span>'. watchIcon($hasWatched, '');
             $output .= anchor(
                 $icon,
                 "/group/watch/{$groupID}/" . Gdn::session()->transientKey(),
-                'Hijack watchButton' . ($hasWatched ? ' isWatching' : ''),
-                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+                'Hijack watchButton ' . ($hasWatched ? ' isWatching tooltip' : 'tooltip'),
+                [ 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
             );
 
         } else if($hasWatched) {
-            $icon = watchIcon($hasWatched,$text);
+            $icon = '<span class="tooltiptext">'.$text.'</span>'. watchIcon($hasWatched,'');
             $output .= anchor(
                 $icon,
                 "/group/unwatch/{$groupID}/" . Gdn::session()->transientKey(),
-                'Hijack watchButton' . ($hasWatched ? ' isWatching' : ''),
-                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+                'Hijack watchButton ' . ($hasWatched ? ' isWatching tooltip' : 'tooltip'),
+                ['aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
             );
         }
 
