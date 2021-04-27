@@ -25,7 +25,7 @@ $ViewLocation = $this->fetchViewLocation('discussions', 'discussions', 'vanilla'
 ?>
 <?php echo writeGroupHeader($Group, true, $Owner);?>
 
-<div class="Group-Content">
+<div class="">
     <div class="Group-Box Group-Announcements Section-DiscussionList">
         <h1 class="H">Announcements</h1>
         <div class="PageControls">

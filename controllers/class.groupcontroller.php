@@ -142,6 +142,8 @@ class GroupController extends VanillaController {
         }
         $this->setData('Discussions', $Discussions);
 
+        // render dropdown options
+        $this->ShowOptions = true;
 
         $this->setData('DefaultAnnouncementUrl', $defaultAnnouncementUrl.'?announce=1');
         $this->setData('DefaultDiscussionUrl', $defaultDiscussionUrl);
