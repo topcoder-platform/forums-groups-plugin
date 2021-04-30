@@ -45,24 +45,24 @@ if (!function_exists('watchGroupButton')) {
         $hasWatched = $groupModel->hasWatchedGroup($group);
         $groupID = $group->GroupID;
         $output = '';
-        $text = $hasWatched ? t('Stop watching the group') : t('Watch the group');
+        $text = $hasWatched ? t('Stop watching forum') : t('Watch forum');
 
         if($canWatch && !$hasWatched) {
-            $icon = watchIcon($hasWatched, $text);
+            $icon = '<span class="tooltiptext">'.$text.'</span>'. watchIcon($hasWatched, '');
             $output .= anchor(
                 $icon,
                 "/group/watch/{$groupID}/" . Gdn::session()->transientKey(),
-                'Hijack watchButton' . ($hasWatched ? ' isWatching' : ''),
-                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+                'Hijack watchButton ' . ($hasWatched ? ' isWatching tooltip' : 'tooltip'),
+                [ 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
             );
 
         } else if($hasWatched) {
-            $icon = watchIcon($hasWatched,$text);
+            $icon = '<span class="tooltiptext">'.$text.'</span>'. watchIcon($hasWatched,'');
             $output .= anchor(
                 $icon,
                 "/group/unwatch/{$groupID}/" . Gdn::session()->transientKey(),
-                'Hijack watchButton' . ($hasWatched ? ' isWatching' : ''),
-                ['title' => $text, 'aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
+                'Hijack watchButton ' . ($hasWatched ? ' isWatching tooltip' : 'tooltip'),
+                ['aria-pressed' => $hasWatched ? 'true' : 'false', 'role' => 'button', 'tabindex' => '0']
             );
         }
 
@@ -295,7 +295,14 @@ if (!function_exists('writeGroupMetaData')) {
                 <div class="MItem TableRow Last">
                     <div class="TableCell Cell1">
                         <span class="MLabel">Privacy</span>
-                        <span class="MValue"><?php  echo  $group->Privacy; ?></span>
+                        <span class="MValue"><?php
+                            $challenge = gdn::controller()->data('Challenge');
+                            if($challenge &&  $challenge['ChallengeID'] == $group->ChallengeID) {
+                                echo $challenge['IsNDA'] == true ? 'NDA Required' : 'Public';
+                            } else {
+                                echo '';
+                            }
+                            ?></span>
                     </div>
                     <div class="TableCell Cell2">
                         <span class="MLabel">Date Created</span>

@@ -86,45 +86,96 @@ class GroupController extends VanillaController {
         $this->setData('Group', $Group, true);
 
         $this->title($Group->Name);
+        $category = $this->CategoryModel->getByCode($Group->ChallengeID);
+        $categoryID= val('CategoryID', $category);
+        $this->setData('GroupCategoryID',  $categoryID);
+        $this->setData('Breadcrumbs', $this->buildBreadcrumbs($categoryID));
 
-        $this->setData('Breadcrumbs', $this->buildBreadcrumb($Group));
         $roleResources = $this->data('ChallengeRoleResources');
         $resources = $this->data('ChallengeResources');
         $copilots = $this->getCopilots($resources, $roleResources);
         $this->setData('Copilots', $copilots);
         $groupDiscussions =  $this->GroupModel->getGroupDiscussionCategories($Group);
-        $defaultDiscussionUrl = '/post/discussion/';
+        $defaultDiscussionUrl= $defaultAnnouncementUrl = '/post/discussion/';
         if($Group->Type == GroupModel::TYPE_REGULAR) {
             if(count($groupDiscussions) > 0) {
                 $defaultDiscussionUrl .= $groupDiscussions[0]['UrlCode'];
             }
         } else if($Group->Type == GroupModel::TYPE_CHALLENGE) {
             if(count($groupDiscussions) == 1) {
-                $defaultDiscussionUrl .= $groupDiscussions[0]['UrlCode'];
+                $defaultAnnouncementUrl .= $groupDiscussions[0]['UrlCode'];
             } else {
                 foreach ($groupDiscussions as $groupDiscussion) {
                     if ($groupDiscussion['Name'] == 'Code Questions') {
-                        $defaultDiscussionUrl .= $groupDiscussion['UrlCode'];
+                        $defaultAnnouncementUrl .= $groupDiscussion['UrlCode'];
                         break;
                     }
                 }
             }
         }
 
-        $this->setData('DefaultAnnouncementUrl', $defaultDiscussionUrl.'?announce=1');
+        $CategoryIDs = $this->GroupModel->getAllGroupCategoryIDs($Group->GroupID);
+        $Categories = $this->CategoryModel->getFull($CategoryIDs)->resultArray();
+        $this->setData('Categories', $Categories);
+
+        // Get category data and discussions
+
+        $this->DiscussionsPerCategory = c('Vanilla.Discussions.PerCategory', 5);
+        $DiscussionModel = new DiscussionModel();
+        $DiscussionModel->setSort(Gdn::request()->get());
+        $DiscussionModel->setFilters(Gdn::request()->get());
+        $this->setData('Sort', $DiscussionModel->getSort());
+        $this->setData('Filters', $DiscussionModel->getFilters());
+
+        $this->CategoryDiscussionData = [];
+        $Discussions = [];
+
+        foreach ($this->CategoryData->result() as $Category) {
+            if ($Category->CategoryID > 0) {
+                $this->CategoryDiscussionData[$Category->CategoryID] = $DiscussionModel->get(0, $this->DiscussionsPerCategory,
+                    ['d.CategoryID' => $Category->CategoryID, 'Announce' => '0']);
+                $Discussions = array_merge(
+                    $Discussions,
+                    $this->CategoryDiscussionData[$Category->CategoryID]->resultObject()
+                );
+            }
+        }
+        $this->setData('Discussions', $Discussions);
+
+        // render dropdown options
+        $this->ShowOptions = true;
+
+        $this->setData('DefaultAnnouncementUrl', $defaultAnnouncementUrl.'?announce=1');
         $this->setData('DefaultDiscussionUrl', $defaultDiscussionUrl);
 
         // Find all discussions with content from after DateMarkedRead.
         $discussionModel = new DiscussionModel();
         $categoryIDs = $this->GroupModel->getAllGroupCategoryIDs($Group->GroupID);
-        $wheres = ['d.CategoryID' => $categoryIDs];
         $announcementsWheres = ['d.CategoryID' => $categoryIDs, 'd.Announce > '=> 0];
-        //Don't use WhereRecent due to load all data including announce.
-        $discussions = $discussionModel->getWhere($wheres,'DateInserted', 'asc');
         $announcements = $discussionModel->getAnnouncements($announcementsWheres );
         $this->setData('Announcements', $announcements);
-        $this->setData('Discussions', $discussions);
+
+        $Path = $this->fetchViewLocation('helper_functions', 'discussions', 'vanilla', false);
+        if ($Path) {
+            include_once $Path;
+        }
+
+        // For GetOptions function
+        $Path2 = $this->fetchViewLocation('helper_functions', 'categories', 'vanilla', false);
+        if ($Path2) {
+            include_once $Path2;
+        }
         $this->render();
+    }
+
+    public function __get($name) {
+        switch ($name) {
+            case 'CategoryData':
+//            deprecated('CategoriesController->CategoryData', "CategoriesController->data('Categories')");
+                $this->CategoryData = new Gdn_DataSet($this->data('Categories'), DATASET_TYPE_ARRAY);
+                $this->CategoryData->datasetType(DATASET_TYPE_OBJECT);
+                return $this->CategoryData;
+        }
     }
 
     private function getCopilots($resources = null, $roleResources = null) {

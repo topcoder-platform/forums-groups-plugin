@@ -16,7 +16,7 @@ $bannerCssClass = $Group->Banner ? 'HasBanner':'NoBanner';
 
 <?php echo writeGroupHeader($Group);?>
 
-<div class="Group-Content">
+<div class="">
     <div class="Group-Box Group-Discussions Section-DiscussionList">
     <?php
         echo ' <h1 class="H clearfix">Discussions</h1>';

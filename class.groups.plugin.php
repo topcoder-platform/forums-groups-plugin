@@ -533,7 +533,7 @@ class GroupsPlugin extends Gdn_Plugin {
     public function categoryModel_setCategoryMetaData_create(CategoryModel $sender) {
         $categoryIDs = val(0, $sender->EventArguments);
         $userID = val(1, $sender->EventArguments);
-        $watched = val(2, $sender->EventArguments);
+        $watched = val(2, $sender->EventArguments); // 1, 2- partly watched, null- remove
         $userMetaModel = new UserMetaModel();
         if(is_numeric($categoryIDs) ) {
             $categoryIDs = [$categoryIDs];
@@ -552,7 +552,13 @@ class GroupsPlugin extends Gdn_Plugin {
         $userMetaModel = new UserMetaModel();
         $userMetaModel->setWatchedCategoriesCount($userID);
         Gdn::cache()->remove("UserMeta_{$userID}");
-        return;// $sender->hasWatched($categoryIDs,$userID);
+
+        $discussionModel = new DiscussionModel();
+        // Don't change bookmark flag in UserDiscussion
+        if($watched != 2) {
+            $discussionModel->bookmarkAll($categoryIDs, $userID, $watched == 1 ? 1 : 0);
+        }
+        return;
     }
 
     /**
@@ -599,6 +605,43 @@ class GroupsPlugin extends Gdn_Plugin {
             }
         }
         return false;
+    }
+
+    /**
+     * Get user notification preferences
+     *
+     * @param $userID
+     * @param $categoryIDs array|int
+     * @return array The list of categories with all preference keys.
+     */
+    public function categoryModel_getCategoryNotificationPreferences_create(CategoryModel $sender) {
+        $categoryIDs = val(0, $sender->EventArguments);
+        $userID = val(1, $sender->EventArguments);
+
+        if(is_numeric($categoryIDs) ) {
+            $categoryIDs = [$categoryIDs];
+        }
+        $result = [];
+        $userMetaModel = new UserMetaModel();
+        foreach ($categoryIDs as $categoryID) {
+            // need to cast to int, by default all values are strings
+            $newEmailDiscussionKey = 'Preferences.Email.NewDiscussion.' . $categoryID;
+            $newEmailDiscussionValue = $userMetaModel->getUserMeta($userID, $newEmailDiscussionKey, null);
+            $result[$categoryID][$newEmailDiscussionKey] = $newEmailDiscussionValue[$newEmailDiscussionKey];
+
+            $newEmailCommentKey = 'Preferences.Email.NewComment.' . $categoryID;
+            $newEmailCommentValue = $userMetaModel->getUserMeta($userID, $newEmailCommentKey, null);
+            $result[$categoryID][$newEmailCommentKey] = $newEmailCommentValue[$newEmailCommentKey];
+
+            $newPopupDiscussionKey = 'Preferences.Popup.NewDiscussion.' . $categoryID;
+            $newPopupDiscussionValue = $userMetaModel->getUserMeta($userID, $newPopupDiscussionKey, null);
+            $result[$categoryID][$newPopupDiscussionKey] = $newPopupDiscussionValue[$newPopupDiscussionKey];
+
+            $newPopupCommentKey = 'Preferences.Popup.NewComment.' . $categoryID;
+            $newPopupCommentValue = $userMetaModel->getUserMeta($userID, $newPopupCommentKey, null);
+            $result[$categoryID][$newPopupCommentKey] = $newPopupCommentValue[$newPopupCommentKey];
+        }
+        return $result;
     }
 
     //
@@ -892,8 +935,9 @@ class GroupsPlugin extends Gdn_Plugin {
             if ($sender instanceof CategoriesController || $sender instanceof  PostController) {
                 $category = $sender->data('Category');
                 if($category) {
-                    $groupID = val('GroupID', $category);
-                    if($groupID) {
+                    $categoryID = val('CategoryID', $category);
+                    $isChallengeForums  = $sender->checkChallengeForums($categoryID);
+                    if($isChallengeForums) {
                         $menu['AllCategories']['IsActive']  =  false;
                         return;
                     }
@@ -923,8 +967,9 @@ class GroupsPlugin extends Gdn_Plugin {
         if ($sender instanceof CategoriesController || $sender instanceof  PostController) {
             $category = $sender->data('Category');
             if($category) {
-                $groupID = val('GroupID', $category);
-                if($groupID) {
+                $categoryID = val('CategoryID', $category);
+                $isChallengeForums  = $sender->checkChallengeForums($categoryID);
+                if($isChallengeForums) {
                     $cssClass  =  ' Active';
                 }
             }
@@ -992,5 +1037,121 @@ if (!function_exists('wrapCheckOrRadio')) {
             $result .= '</ul>';
             return $result;
         }
+    }
+}
+
+if (!function_exists('groupSorts')) {
+    /**
+     * Returns group sorting.
+     *
+     * @param string $extraClasses any extra classes you add to the drop down
+     * @return string
+     */
+    function groupSorts($extraClasses = '') {
+        if (!Gdn::session()->isValid()) {
+            return;
+        }
+
+        $baseUrl = preg_replace('/\?.*/', '',  Gdn::request()->getFullPath());
+        $transientKey = Gdn::session()->transientKey();
+        $filters = [
+            [
+                'name' => t('New'),
+                'param' => 'sort',
+                'value' => 'new',
+                'extra' => ['TransientKey' => $transientKey, 'save' => 1, 'filter'=>'challenge']
+            ],
+
+            [
+                'name' => t('Old'),
+                'param' => 'sort',
+                'value' => 'old',
+                'extra' => ['TransientKey' => $transientKey, 'save' => 1, 'filter'=>'challenge']
+            ]
+        ];
+
+        $defaultParams = [];
+        if (!empty($defaultParams)) {
+            $defaultUrl = $baseUrl.'?'.http_build_query($defaultParams);
+        } else {
+            $defaultUrl = $baseUrl;
+        }
+
+        return groupSortsDropDown(
+            $baseUrl,
+            $filters,
+            $extraClasses,
+            null,
+            $defaultUrl,
+            'Sort'
+        );
+    }
+}
+
+if (!function_exists('groupSortsDropDown')) {
+    /**
+     * Returns a sorting drop-down menu.
+     *
+     * @param string $baseUrl Target URL with no query string applied.
+     * @param array $filters A multidimensional array of rows with the following properties:
+     *     ** 'name': Friendly name for the filter.
+     *     ** 'param': URL parameter associated with the filter.
+     *     ** 'value': A value for the URL parameter.
+     * @param string $extraClasses any extra classes you add to the drop down
+     * @param string|null $default The default label for when no filter is active. If `null`, the default label is not added
+     * @param string|null $defaultURL URL override to return to the default, unfiltered state.
+     * @param string $label Text for the label to attach to the cont
+     * @return string
+     */
+    function groupSortsDropDown($baseUrl, array $filters = [], $extraClasses = '', $default = null, $defaultUrl = null, $label = 'Sort') {
+        $links = [];
+        $active =  Gdn::session()->getPreference('GroupSort', null);
+        // Translate filters into links.
+        foreach ($filters as $filter) {
+            // Make sure we have the bare minimum: a label and a URL parameter.
+            if (!array_key_exists('name', $filter)) {
+                throw new InvalidArgumentException('Sort does not have a name field.');
+            }
+            if (!array_key_exists('param', $filter)) {
+                throw new InvalidArgumentException('Sort does not have a param field.');
+            }
+
+            // Prepare for consumption by linkDropDown.
+            $query = [$filter['param'] => $filter['value']];
+            if (array_key_exists('extra', $filter) && is_array($filter['extra'])) {
+                $query += $filter['extra'];
+            }
+            $url = url($baseUrl . '?' . http_build_query($query));
+            $link = [
+                'name' => $filter['name'],
+                'url' => $url
+            ];
+
+            // If we don't already have an active link, and this parameter and value match, this is the active link.
+            if ($active === null && Gdn::request()->get($filter['param']) == $filter['value']) {
+                $active = $filter['value'];
+                $link['active'] = true;
+            } else if ($active == $filter['value']){
+                $link['active'] = true;
+                $active = $filter['value'];
+            }
+
+            // Queue up another filter link.
+            $links[] = $link;
+        }
+
+        if ($default !== null) {
+            $default = t('All');
+            // Add the default link to the top of the list.
+            array_unshift($links, [
+                'active' => $active === null,
+                'name' => $default,
+                'url' => $defaultUrl ?: $baseUrl
+            ]);
+        }
+
+        // Generate the markup for the drop down menu.
+        $output = linkDropDown($links, 'selectBox-following ' . trim($extraClasses), t($label) . ': ');
+        return $output;
     }
 }

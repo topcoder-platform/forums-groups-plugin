@@ -78,11 +78,10 @@ class GroupsController extends VanillaController {
         }
     }
 
-    public function index($Page=false, $filter) {
+    public function index($Page=false, $sort, $filter ) {
         DashboardNavModule::getDashboardNav()->setHighlightRoute('groups/challenges');
         $this->Menu->highlightRoute('groups/challenges');
        // Gdn_Theme::section('GroupList');
-
         $GroupModel = new GroupModel();
         $GroupModel->setFilters(Gdn::request()->get());
         $this->setFilterPageData($filter);
@@ -95,10 +94,13 @@ class GroupsController extends VanillaController {
         }
 
         $where =  $filters[0]['where'];
-        GroupsPlugin::log('index:filter', ['filters' => $filters, 'where' =>$where]);
+        //GroupsPlugin::log('index:filter', ['filters' => $filters, 'where' =>$where]);
         list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
         $defaultSort = $GroupModel::getAllowedSorts()['new']['orderBy'];
-        $GroupData = $GroupModel->getMyGroups($where, $defaultSort, $Limit, $Offset);
+        //$GroupModel->setSort($sort);
+        $sort = $GroupModel::getAllowedSorts()[$sort]['orderBy'];
+
+        $GroupData = $GroupModel->getMyGroups($where, $sort, $Limit, $Offset);
         $countOfGroups = $GroupModel->countMyGroups($where);
         //$AvailableGroupData = $GroupModel->getAvailableGroups($where, $defaultSort, $Limit, $Offset);
 
@@ -143,16 +145,31 @@ class GroupsController extends VanillaController {
         $this->render();
     }
 
-    private function mygroups($Page = false, $filter = '') {
+    private function mygroups($Page = false, $filter = '', $sort='') {
         // Setup head
         Gdn_Theme::section('GroupList');
 
         // Determine offset from $Page
-        list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
-        $Page = pageNumber($Offset, $Limit);
+
         $GroupModel = new GroupModel();
         $GroupModel->setFilters(Gdn::request()->get());
+
+        $sort = Gdn::request()->get('sort', null);
+        $saveSorting = $sort !== null && Gdn::request()->get('save') && Gdn::session()->validateTransientKey(Gdn::request()->get('TransientKey', ''));
+        if($saveSorting) {
+            // Reset paging if sorting was changed
+            $Page = 0;
+            Gdn::session()->setPreference('GroupSort', $sort);
+        }
+        $sort =  Gdn::session()->getPreference('GroupSort', 'new');
+        $this->setData('GroupSort', $sort);
+
+        $GroupModel->setSort($sort);
         $filters =  $GroupModel->getFiltersFromKeys($GroupModel->getFilters());
+
+        list($Offset, $Limit) = offsetLimit($Page, c('Vanilla.Groups.PerPage', 30), true);
+
+        $Page = pageNumber($Offset, $Limit);
 
         // Filter wasn't found.
         // TODO: redirect to a default page
@@ -160,13 +177,14 @@ class GroupsController extends VanillaController {
             redirectTo(GroupsPlugin::ROUTE_MY_GROUPS);
         }
 
-        $defaultSort = $GroupModel::getAllowedSorts()['new']['orderBy'];
+        $GroupModel->setSort($sort);
+        $defaultSort = $GroupModel::getAllowedSorts()[$sort]['orderBy'];
         $where = $filters[0]['where'];
         $GroupData = $GroupModel->getMyGroups($where, $defaultSort, $Limit, $Offset);
         $CountGroups = $GroupModel->countMyGroups($where);
         $this->setData('CountGroups', $CountGroups);
         $this->setData('Groups', $GroupData, true);
-      //  $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
+        // $this->setData('CurrentUserGroups', GroupModel::memberOf(Gdn::session()->UserID));
 
         // Build a pager
         $PagerFactory = new Gdn_PagerFactory();
