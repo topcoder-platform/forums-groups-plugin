@@ -761,7 +761,7 @@ class GroupModel extends Gdn_Model {
             ->select('lcu1.Email', '', 'LastDiscussionCommentsUserEmail')
             ->from('Group g')
             ->join('UserGroup ug', 'ug.GroupID=g.GroupID and ug.UserID='.Gdn::session()->UserID)
-            ->join('Category c', 'c.GroupID=g.GroupID and c.DisplayAs ="Categories"')
+            ->join('Category c', 'c.GroupID=g.GroupID and c.UrlCode = g.ChallengeID')
             ->join('User lcu1', 'c.LastDiscussionCommentsUserID = lcu1.UserID')// Last post/comment inserted/edited by user
             ->where('g.Archived' , 0 )
             ->where($where);
