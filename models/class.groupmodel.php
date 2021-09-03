@@ -1,4 +1,7 @@
 <?php
+
+use Nbbc\Profiler;
+
 /**
  * Class GroupModel
  */
@@ -1210,7 +1213,13 @@ class GroupModel extends Gdn_Model {
     public static function memberOf($userID){
         $key = 'UserGroup_'.$userID;
         $result = Gdn::cache()->get($key);
-        if ($result === Gdn_Cache::CACHEOP_FAILURE || $result == false) {
+        if (class_exists('Tideways\Profiler')) {
+            \Tideways\Profiler::setCustomVariable('UserID', $userID);
+        }
+        if ($result === Gdn_Cache::CACHEOP_FAILURE || $result === false) {
+            if (class_exists('Tideways\Profiler')) {
+                \Tideways\Profiler::addEventMarker('NoUserGroupCache-' . $userID);
+            }
             $sql = Gdn::sql();
             $sql = clone $sql;
             $sql->reset();
