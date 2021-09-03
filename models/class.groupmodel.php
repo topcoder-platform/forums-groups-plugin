@@ -1,7 +1,5 @@
 <?php
 
-use Nbbc\Profiler;
-
 /**
  * Class GroupModel
  */
