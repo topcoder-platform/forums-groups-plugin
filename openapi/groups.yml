@@ -425,7 +425,11 @@ components:
         watch:
           description: Watch status
           type: boolean
+        unreadNotifications:
+          description: Count of unread notifications for the group
+          type: integer
       required:
         - userID
         - watch
+        - unreadNotifications
       type: object

@@ -381,7 +381,8 @@ class GroupsApiController extends AbstractApiController {
         }
 
         $hasWatched = $this->groupModel->hasWatchedGroup($group, $user->UserID);
-        $record = ['userID' => $user->UserID, 'watch' => $hasWatched];
+        $unreadNotifications = $this->groupModel->getUnreadNotifications($group, $user->UserID);
+        $record = ['userID' => $user->UserID, 'watch' => $hasWatched , 'unreadNotifications' => $unreadNotifications];
         $out = $this->schema($this->groupMemberDetailsSchema('out'));
         $result = $out->validate($record);
         return $result;
@@ -417,7 +418,8 @@ class GroupsApiController extends AbstractApiController {
             $this->groupMemberDetailsSchema = $this->schema(
                 Schema::parse([
                     'userID:i' => 'The userID.',
-                    'watch:b' => 'Watch status'
+                    'watch:b' => 'Watch status',
+                    'unreadNotifications:i' => 'Count of unread notifications'
                 ]),
                 'GroupMemberDetails'
             );
