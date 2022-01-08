@@ -102,13 +102,18 @@ class GroupsApiController extends AbstractApiController {
     /**
      * Lookup a group by its numeric ID.
      *
-     * @param int $id The group ID
+     * @param int|uuid $id1 The ID of the group  or challenge
      * @throws NotFoundException if the group cannot be found.
      * @return array
      */
-    public function get($id) {
+    public function get($id1) {
         $this->permission();
-        $group = $this->groupModel->getID($id, DATASET_TYPE_ARRAY);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+
+        $group = $this->groupModel->getID($groupID, DATASET_TYPE_ARRAY);
         if (!$group) {
             throw new NotFoundException('Group');
         }
@@ -146,11 +151,17 @@ class GroupsApiController extends AbstractApiController {
      * @throws ServerException if the group could not be updated.
      * @return array
      */
-    public function patch($id, array $body) {
+    public function patch($id1, array $body) {
         $in = $this->groupPatchSchema()->setDescription('Update a group.');
         $out = $this->groupSchema('out');
         $body = $in->validate($body);
-        $group = $this->groupModel->getByGroupID($id);
+
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+
+        $group = $this->groupModel->getByGroupID($groupID);
         if(!$group) {
             throw new NotFoundException('Group');
         }
@@ -160,20 +171,20 @@ class GroupsApiController extends AbstractApiController {
         if ($result == false) {
             throw new ServerException('Unable to update a group.', 500);
         }
-        $row = $this->groupModel->getID($id, DATASET_TYPE_ARRAY);
+        $row = $this->groupModel->getID($groupID, DATASET_TYPE_ARRAY);
         return $out->validate($row);
     }
 
     /**
      * Add participants to a group.
      *
-     * @param int $id The ID of the group.
+     * @param int|uuid $id1 The ID of the group or challenge.
      * @param array $body The request body.
      * @throws NotFoundException if the group or user could not be found.
      * @throws ServerException If the user could not be added.
      * @return array
      */
-    public function post_members($id, array $body) {
+    public function post_members($id1, array $body) {
         $this->idParamSchema();
 
         $in = $this->groupMemberPostSchema('in')->setDescription('Add a member to a group.');
@@ -181,7 +192,12 @@ class GroupsApiController extends AbstractApiController {
 
         $body = $in->validate($body);
 
-        $group = $this->groupModel->getByGroupID($id);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+
+        $group = $this->groupModel->getByGroupID($groupID);
         if(!$group) {
             throw new NotFoundException('Group');
         }
@@ -203,13 +219,13 @@ class GroupsApiController extends AbstractApiController {
     /**
      * Get all members of a group.
      *
-     * @param int $id The ID of the group.
+     * @param int|uuid $id The ID of the group or challengeID.
      * @param array $query
      * @return Data
      * @throws ClientException
      * @throws NotFoundException if the group could not be found.
      */
-    public function get_members($id, array $query) {
+    public function get_members($id1, array $query) {
         $this->permission();
         $in = $this->schema([
             'page:i?' => [
@@ -232,16 +248,20 @@ class GroupsApiController extends AbstractApiController {
             ],
         ], 'out');
 
-        $group = $this->groupModel->getID($id, DATASET_TYPE_ARRAY);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+        $group = $this->groupModel->getID($groupID, DATASET_TYPE_ARRAY);
         if (!$group) {
             throw new NotFoundException('Group');
         }
 
         $query = $in->validate($query);
         list($offset, $limit) = offsetLimit("p{$query['page']}", $query['limit']);
-        $records =  $this->groupModel->getMembers($id, [], '',$limit, $offset );
+        $records =  $this->groupModel->getMembers($groupID, [], '',$limit, $offset );
         $result = $out->validate($records);
-        $paging = ApiUtils::morePagerInfo($result, '/api/v2/groups/'.$id.'/members', $query, $in);
+        $paging = ApiUtils::morePagerInfo($result, '/api/v2/groups/'.$groupID.'/members', $query, $in);
 
         return new Data($result, ['paging' => $paging]);
     }
@@ -249,16 +269,21 @@ class GroupsApiController extends AbstractApiController {
     /**
      * Archive a group.
      *
-     * @param int $id The ID of the group.
+     * @param int|uuid $id1 The ID of the group or challenge.
      * @throws NotFoundException if the group could not be found.
      * @throws ServerException If the group could not be archived.
      * @return
      */
-    public function put_archive($id) {
+    public function put_archive($id1) {
         $this->permission('Groups.Group.Archive');
         $this->idParamSchema();
 
-        $group = $this->groupModel->getByGroupID($id);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+        $group = $this->groupModel->getByGroupID($groupID);
+
         if(!$group) {
             throw new NotFoundException('Group');
         }
@@ -272,16 +297,20 @@ class GroupsApiController extends AbstractApiController {
     /**
      * Unarchive a group.
      *
-     * @param int $id The ID of the group.
+     * @param int|uuid $id1 The ID of the group or challenge.
      * @throws NotFoundException if the group could not be found.
      * @throws ServerException If the group could not be archived.
      * @return
      */
-    public function put_unarchive($id) {
+    public function put_unarchive($id1) {
         $this->permission('Groups.Group.Archive');
         $this->idParamSchema();
 
-        $group = $this->groupModel->getByGroupID($id);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+        $group = $this->groupModel->getByGroupID($groupID);
         if(!$group) {
             throw new NotFoundException('Group');
         }
@@ -295,15 +324,19 @@ class GroupsApiController extends AbstractApiController {
     /**
      * Remove a member from a group
      *
-     * @param int $id The groupID of the group
+     * @param int|uuiid $id1 The ID of the group or challenge
      * @param int $userid The Vanilla User ID of the user
      * @throws NotFoundException if the group or user could not be found.
      */
-    public function delete_member($id, $userid) {
+    public function delete_member($id1, $userid) {
         $this->idUserIdParamSchema()->setDescription('Remove a member from a group.');
         $this->schema([], 'out');
 
-        $group = $this->groupModel->getByGroupID($id);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+        $group = $this->groupModel->getByGroupID($groupID);
         if(!$group) {
             throw new NotFoundException('Group');
         }
@@ -323,11 +356,11 @@ class GroupsApiController extends AbstractApiController {
     /**
      * Update watch status for a member
      *
-     * @param int $id The groupID of the group
+     * @param int|uuid $id1 The ID of the group or challenge
      * @param int $userid The Vanilla User ID of the user
      * @throws NotFoundException if the group or user could not be found.
      */
-    public function patch_member($id, $userid, array $body) {
+    public function patch_member($id1, $userid, array $body) {
         $this->permission('Groups.Group.Edit');
         $in = $this->groupMemberPatchSchema();
         $user = Gdn::userModel()->getID($userid);
@@ -335,7 +368,12 @@ class GroupsApiController extends AbstractApiController {
             throw new NotFoundException('User');
         }
 
-        $group = $this->groupModel->getByGroupID($id);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+        $group = $this->groupModel->getByGroupID($groupID);
+
         if(!$group) {
             throw new NotFoundException('Group');
         }
@@ -359,18 +397,23 @@ class GroupsApiController extends AbstractApiController {
     /**
      * Get Member details
      *
-     * @param int $id The groupID of the group
+     * @param int|uuid $id1 The groupID of the group or challenge
      * @param int $userid The Vanilla User ID of the user
      * @throws NotFoundException if the group or user could not be found.
      */
-    public function get_member($id, $userid) {
+    public function get_member($id1, $userid) {
         $this->permission();
         $user = Gdn::userModel()->getID($userid);
         if(!$user) {
             throw new NotFoundException('User');
         }
 
-        $group = $this->groupModel->getByGroupID($id);
+        $groupID = $this->convertToGroupID($id1);
+        if($groupID === false) {
+            throw new Exception('The format of id is invalid');
+        }
+
+        $group = $this->groupModel->getByGroupID($groupID);
         if(!$group) {
             throw new NotFoundException('Group');
         }
@@ -531,5 +574,27 @@ class GroupsApiController extends AbstractApiController {
             'challengeID:s?' => 'The challengeID of the Topcoder challenge.',
             'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
         ]);
+    }
+    private function convertToGroupID($id) {
+        if(is_numeric($id)) {
+            return $id;
+        }
+        if($this->isValidUuid($id) === true) {
+            $categoryModel = new CategoryModel();
+            $category = $categoryModel->getByCode($id);
+            return val('GroupID', $category, false);
+        }
+        return false;
+    }
+
+    private function isValidUuid($uuid) {
+
+        if(!is_string($uuid)) {
+            return false;
+        }
+        if (!\preg_match('/^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/', $uuid)) {
+            return false;
+        }
+        return true;
     }
 }
