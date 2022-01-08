@@ -76,12 +76,14 @@ paths:
      get:
       parameters:
       - description: |
-          The group ID.
+          The groupID (int) or challengeID(uuid).
         in: path
         name: id
         required: true
         schema:
-          type: integer
+          oneOf:
+            - type: integer
+            - $ref: '#/components/schemas/uuid'
       responses:
         '200':
           content:
@@ -94,12 +96,14 @@ paths:
       summary: Get a group.
      patch:
        parameters:
-         - description: The group ID.
+         - description: The groupID (int) or challengeID(uuid).
            in: path
            name: id
            required: true
            schema:
-             type: integer
+             oneOf:
+               - type: integer
+               - $ref: '#/components/schemas/uuid'
        responses:
          '200':
            content:
@@ -119,12 +123,14 @@ paths:
   '/groups/{id}/member/{userid}':
     get:
       parameters:
-        - description: The group ID.
+        - description: The groupID (int) or challengeID(uuid).
           in: path
           name: id
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - $ref: '#/components/schemas/uuid'
         - description: The user ID.
           in: path
           name: userid
@@ -143,12 +149,15 @@ paths:
       summary: Get a member details.
     patch:
       parameters:
-        - description: The group ID.
+        - description: The groupID (int) or challengeID(uuid).
           in: path
           name: id
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - $ref: '#/components/schemas/uuid'
+
         - description: The user ID.
           in: path
           name: userid
@@ -169,12 +178,14 @@ paths:
       summary: Update watch status for a member.
     delete:
       parameters:
-        - description: The group ID.
+        - description: The groupID (int) or challengeID(uuid).
           in: path
           name: id
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - $ref: '#/components/schemas/uuid'
         - description: The Vanilla User ID.
           in: path
           name: userid
@@ -190,12 +201,14 @@ paths:
   '/groups/{id}/members':
     get:
       parameters:
-        - description: The group ID.
+        - description: The groupID (int) or challengeID (uuid).
           in: path
           name: id
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - $ref: '#/components/schemas/uuid'
         - description: |
             Page number. See [Pagination](https://docs.vanillaforums.com/apiv2/#pagination).
           in: query
@@ -226,12 +239,14 @@ paths:
       summary: The list of group members.
     post:
       parameters:
-        - description: The group ID.
+        - description: The groupID (int) or challengeID(uuid).
           in: path
           name: id
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - $ref: '#/components/schemas/uuid'
       responses:
         '204':
           description: Success
@@ -247,12 +262,14 @@ paths:
   '/groups/{id}/archive':
     put:
       parameters:
-        - description: The group ID.
+        - description: The groupID (int) or challengeID(uuid).
           in: path
           name: id
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - $ref: '#/components/schemas/uuid'
       responses:
         '204':
           description: Success
@@ -264,12 +281,14 @@ paths:
   '/groups/{id}/unarchive':
     put:
       parameters:
-        - description: The group ID.
+        - description: The groupID (int) or challengeID(uuid).
           in: path
           name: id
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - $ref: '#/components/schemas/uuid'
       responses:
         '204':
           description: Success
@@ -293,6 +312,13 @@ components:
             $ref: '#/components/schemas/GroupPatch'
       required: true
   schemas:
+    uuid:
+      type: string
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+      # the regex above limits the length;
+      # however, some tools might require explicit settings:
+      minLength: 36
+      maxLength: 36
     Group:
       properties:
         groupID:
