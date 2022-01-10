@@ -47,7 +47,7 @@ class GroupsApiController extends AbstractApiController {
      * @return Data
      */
     public function index(array $query) {
-        $this->permission();
+        $this->permission('Garden.SignIn.Allow');
 
         $in = $this->schema([
             'challengeID:s?' => [
@@ -107,7 +107,7 @@ class GroupsApiController extends AbstractApiController {
      * @return array
      */
     public function get($id1) {
-        $this->permission();
+        $this->permission('Garden.SignIn.Allow');
         $groupID = $this->convertToGroupID($id1);
         if($groupID === false) {
             throw new Exception('The format of id is invalid');
@@ -152,6 +152,7 @@ class GroupsApiController extends AbstractApiController {
      * @return array
      */
     public function patch($id1, array $body) {
+        $this->permission('Garden.SignIn.Allow');
         $in = $this->groupPatchSchema()->setDescription('Update a group.');
         $out = $this->groupSchema('out');
         $body = $in->validate($body);
@@ -185,6 +186,7 @@ class GroupsApiController extends AbstractApiController {
      * @return array
      */
     public function post_members($id1, array $body) {
+        $this->permission('Garden.SignIn.Allow');
         $this->idParamSchema();
 
         $in = $this->groupMemberPostSchema('in')->setDescription('Add a member to a group.');
@@ -226,7 +228,7 @@ class GroupsApiController extends AbstractApiController {
      * @throws NotFoundException if the group could not be found.
      */
     public function get_members($id1, array $query) {
-        $this->permission();
+        $this->permission('Garden.SignIn.Allow');
         $in = $this->schema([
             'page:i?' => [
                 'description' => 'Page number. See [Pagination](https://docs.vanillaforums.com/apiv2/#pagination).',
@@ -329,6 +331,7 @@ class GroupsApiController extends AbstractApiController {
      * @throws NotFoundException if the group or user could not be found.
      */
     public function delete_member($id1, $userid) {
+        $this->permission('Garden.SignIn.Allow');
         $this->idUserIdParamSchema()->setDescription('Remove a member from a group.');
         $this->schema([], 'out');
 
@@ -398,12 +401,18 @@ class GroupsApiController extends AbstractApiController {
      * Get Member details
      *
      * @param int|uuid $id1 The groupID of the group or challenge
-     * @param int $userid The Vanilla User ID of the user
+     * @param int|string $userid The Vanilla User ID of the user or Topcoder Handle
      * @throws NotFoundException if the group or user could not be found.
      */
-    public function get_member($id1, $userid) {
-        $this->permission();
-        $user = Gdn::userModel()->getID($userid);
+    public function get_member($id1, $userid1) {
+        $this->permission('Garden.SignIn.Allow');
+        if(is_numeric($userid1)) {
+            $user = Gdn::userModel()->getID($userid1);
+        } else {
+           $topcoderHandle = $this->convertToUserID($userid1);
+           $user = Gdn::userModel()->getByUsername($topcoderHandle, false);
+        }
+
         if(!$user) {
             throw new NotFoundException('User');
         }
@@ -575,6 +584,14 @@ class GroupsApiController extends AbstractApiController {
             'challengeUrl:s?' => 'The challengeUrl of the Topcoder challenge.',
         ]);
     }
+
+    private function convertToUserID($id) {
+        if(is_numeric($id)) {
+            return $id;
+        }
+        return urldecode($id);
+    }
+
     private function convertToGroupID($id) {
         if(is_numeric($id)) {
             return $id;
@@ -588,7 +605,6 @@ class GroupsApiController extends AbstractApiController {
     }
 
     private function isValidUuid($uuid) {
-
         if(!is_string($uuid)) {
             return false;
         }
