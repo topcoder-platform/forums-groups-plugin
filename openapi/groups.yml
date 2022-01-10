@@ -131,12 +131,14 @@ paths:
             oneOf:
               - type: integer
               - $ref: '#/components/schemas/uuid'
-        - description: The user ID.
+        - description: The Vanilla UserID or Topcoder Handle.
           in: path
           name: userid
           required: true
           schema:
-            type: integer
+            oneOf:
+              - type: integer
+              - type: string
       responses:
         '200':
           content:
