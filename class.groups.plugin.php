@@ -328,6 +328,9 @@ class GroupsPlugin extends Gdn_Plugin {
                 $options->removeItem('refetch');
             }
 
+            if(hideInMFE()) {
+                $options->setItems([]);
+            }
             self::log('discussionController_discussionOptionsDropdown_handler', ['Discussion' => $Discussion->DiscussionID,
                 'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canDismiss' => $canDismiss,
                 'canAnnounce' =>$canAnnounce, 'canSink' => $canSink, 'canMove' => $canMove, 'canReFetch' => $canRefetch ]);
@@ -380,9 +383,9 @@ class GroupsPlugin extends Gdn_Plugin {
             if($groupID) {
                 $group = $groupModel->getByGroupID($groupID);
                 if($group->ChallengeUrl) {
-                    echo anchor($group->Name, $group->ChallengeUrl);
+                    echo anchor($group->Name, hideInMFE() ? '' : $group->ChallengeUrl);
                 } else {
-                    echo anchor($group->Name, GroupsPlugin::GROUP_ROUTE.$groupID);
+                    echo anchor($group->Name, hideInMFE() ? '' : GroupsPlugin::GROUP_ROUTE.$groupID);
                 }
             }
         }
@@ -422,12 +425,15 @@ class GroupsPlugin extends Gdn_Plugin {
     }
 
     private function writeAfterChallenge($sender, $args) {
+        if(hideInMFE()) {
+            return;
+        }
         $category = $args['Category'];
         $groupID = val('GroupID', $category);
         if($groupID) {
             $group = $this->groupModel->getByGroupID($groupID);
             $type = ucfirst(GroupsPlugin::UI[$group->Type]['TypeName']);
-            echo '<span>'.$type.':</span>&nbsp;'.anchor( $group->Name, self::GROUP_ROUTE.$group->GroupID);
+            echo '<div class="Challenge"><span>'.$type.':</span>&nbsp;'.anchor( $group->Name, self::GROUP_ROUTE.$group->GroupID).'</div>';
         }
     }
 
