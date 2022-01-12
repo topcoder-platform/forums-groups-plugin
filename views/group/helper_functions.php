@@ -40,11 +40,14 @@ if (!function_exists('watchGroupButton')) {
      * @return string
      */
     function watchGroupButton($group) {
+        $output = '';
+        if(hideInMFE()) {
+            return $output;
+        }
         $groupModel = new GroupModel();
         $canWatch = $groupModel->canWatchGroup($group);
         $hasWatched = $groupModel->hasWatchedGroup($group);
         $groupID = $group->GroupID;
-        $output = '';
         $text = $hasWatched ? t('Stop watching forum') : t('Watch forum');
 
         if($canWatch && !$hasWatched) {

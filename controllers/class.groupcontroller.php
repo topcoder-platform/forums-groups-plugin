@@ -66,13 +66,39 @@ class GroupController extends VanillaController {
             ['Name' => $Group->Name, 'Url' => GroupsPlugin::GROUP_ROUTE.$Group->GroupID]];
     }
 
+
+    private function convertToGroupID($id) {
+        if(is_numeric($id) && $id > 0) {
+            return $id;
+        }
+
+        if($this->isValidUuid($id) === true) {
+            $categoryModel = new CategoryModel();
+            $category = $categoryModel->getByCode($id);
+            return val('GroupID', $category, 0);
+        }
+
+        return 0;
+    }
+
+    private function isValidUuid($uuid) {
+        if(!is_string($uuid)) {
+            return false;
+        }
+        if (!\preg_match('/^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$/', $uuid)) {
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Default single group display.
      *
      * @param int $GroupID Unique group ID
      */
     public function index($GroupID = '') {
-        $GroupID = (is_numeric($GroupID) && $GroupID > 0) ? $GroupID : 0;
+        //Support MFE
+        $GroupID = $this->convertToGroupID($GroupID);
         $Group = $this->findGroup($GroupID);
 
         if(!$this->GroupModel->canView($Group)) {
