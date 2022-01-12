@@ -32,7 +32,7 @@ $ViewLocation = $this->fetchViewLocation('discussions', 'discussions', 'vanilla'
             <div class="Button-Controls">
                 <?php
 
-                if($groupModel->canAddNewAnnouncement($Group)) {
+                if($groupModel->canAddNewAnnouncement($Group) && !hideInMFE()) {
                    echo anchor('New Announcement', $this->data('DefaultAnnouncementUrl'), 'Button Primary', '');
                 }
                 ?>
@@ -87,7 +87,7 @@ $ViewLocation = $this->fetchViewLocation('discussions', 'discussions', 'vanilla'
                     <div class="PageControls">
                       <div class="Button-Controls">
                           <?php
-                          if($groupModel->canAddDiscussion($Group)) {
+                          if($groupModel->canAddDiscussion($Group) && !hideInMFE()) {
                               // The group category is selected automatically
                               echo anchor('New Discussion', $this->data('DefaultDiscussionUrl').$Category->UrlCode, 'Button Primary', '');
                           }
