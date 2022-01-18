@@ -211,6 +211,7 @@ class GroupsPlugin extends Gdn_Plugin {
 
     public function base_groupOptionsDropdown_handler($sender, $args){
         $group = $args['Group'];
+        $options = &$args['GroupOptionsDropdown'];
         // $currentTopcoderProjectRoles = $sender->Data['ChallengeCurrentUserProjectRoles'];
         $groupModel = new GroupModel();
         // $groupModel->setCurrentUserTopcoderProjectRoles($currentTopcoderProjectRoles);
@@ -226,6 +227,9 @@ class GroupsPlugin extends Gdn_Plugin {
         $hasFollowed = $groupModel->hasFollowedGroup($group);
         $hasWatched = $groupModel->hasWatchedGroup($group);
 
+        if(hideInMFE()) {
+            $options->setItems([]);
+        }
        // self::log('base_groupOptionsDropdown_handler', ['Group' => $group->GroupID,
        //     'currentUserTopcoderProjectRoles' =>$currentTopcoderProjectRoles,
        //     'canDelete' => $canDelete, 'canEdit' => $canEdit, 'canLeave' => $canLeave,
