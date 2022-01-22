@@ -683,7 +683,7 @@ class GroupsPlugin extends Gdn_Plugin {
                 $data['Data']['GroupID'] = val('GroupID', $group);
                 $data['Data']['ChallengeID'] = val('ChallengeID', $group);
                 $mfeUrl = c("Garden.Embed.RemoteUrl");
-                $data['Data']['EmbedUrl'] = $mfeUrl.'/self-service/work-item/'.val('ChallengeID', $group);
+                $data['Data']['EmbedUrl'] = $mfeUrl.'/self-service/work-items/'.val('ChallengeID', $group);
             }
             $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
             $dateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
@@ -741,7 +741,7 @@ class GroupsPlugin extends Gdn_Plugin {
                 $data['Data']['GroupID'] = val('GroupID', $group);
                 $data['Data']['ChallengeID'] = val('ChallengeID', $group);
                 $mfeUrl = c("Garden.Embed.RemoteUrl");
-                $data['Data']['EmbedUrl'] = $mfeUrl.'/self-service/work-item/'.val('ChallengeID', $group);
+                $data['Data']['EmbedUrl'] = $mfeUrl.'/self-service/work-items/'.val('ChallengeID', $group);
             }
             $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
             $discussionDateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
