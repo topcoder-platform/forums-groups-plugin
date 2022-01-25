@@ -657,7 +657,10 @@ class GroupsPlugin extends Gdn_Plugin {
     //
     // EMAIL TEMPLATES
     //
-
+    private function buildEmbedEmailUrl($challengeID) {
+        $mfeUrl = c("Garden.Embed.RemoteUrl");
+        return $mfeUrl.'/self-service/work-items/'.$challengeID.'/?tab=messaging';
+    }
     /**
      *  New discussion has been posted
      * @param $sender
@@ -682,8 +685,7 @@ class GroupsPlugin extends Gdn_Plugin {
                 $groupLink = $this->buildEmailGroupLink($group);
                 $data['Data']['GroupID'] = val('GroupID', $group);
                 $data['Data']['ChallengeID'] = val('ChallengeID', $group);
-                $mfeUrl = c("Garden.Embed.RemoteUrl");
-                $data['Data']['EmbedUrl'] = $mfeUrl.'/self-service/work-items/'.val('ChallengeID', $group);
+                $data['Data']['EmbedUrl'] = $this->buildEmbedEmailUrl(val('ChallengeID', $group));
             }
             $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
             $dateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
@@ -740,8 +742,7 @@ class GroupsPlugin extends Gdn_Plugin {
                 $groupLink = $this->buildEmailGroupLink($group);
                 $data['Data']['GroupID'] = val('GroupID', $group);
                 $data['Data']['ChallengeID'] = val('ChallengeID', $group);
-                $mfeUrl = c("Garden.Embed.RemoteUrl");
-                $data['Data']['EmbedUrl'] = $mfeUrl.'/self-service/work-items/'.val('ChallengeID', $group);
+                $data['Data']['EmbedUrl'] = $this->buildEmbedEmailUrl(val('ChallengeID', $group));
             }
             $categoryBreadcrumbs = array_column(array_values(CategoryModel::getAncestors($discussion['CategoryID'])), 'Name');
             $discussionDateInserted = Gdn_Format::dateFull($discussion['DateInserted']);
