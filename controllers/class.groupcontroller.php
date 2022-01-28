@@ -115,7 +115,12 @@ class GroupController extends VanillaController {
         $category = $this->CategoryModel->getByCode($Group->ChallengeID);
         $categoryID= val('CategoryID', $category);
         $this->setData('GroupCategoryID',  $categoryID);
-        $this->setData('Breadcrumbs', $this->buildBreadcrumbs($categoryID));
+        // https://github.com/topcoder-platform/forums/issues/674
+        if(hideInMFE()) {
+            $this->setData('Breadcrumbs',[]);
+        } else {
+            $this->setData('Breadcrumbs', $this->buildBreadcrumbs($categoryID));
+        }
 
         $roleResources = $this->data('ChallengeRoleResources');
         $resources = $this->data('ChallengeResources');
