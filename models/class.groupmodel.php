@@ -1414,6 +1414,37 @@ class GroupModel extends Gdn_Model {
         $this->watchGroup($group,$userID,false);
     }
 
+    /**
+     * Get count of unread notifications
+     * @param $group
+     * @param null $userID if userID is not set then the current user is used
+     * @return int  unread notifications for a group
+     */
+    public function getUnreadNotifications($group, $userID = null) {
+        if(!$userID) {
+            $userID = Gdn::session()->UserID;
+        }
+        $groupID =  $group->GroupID;
+        // Activity status: The activity is waiting to be sent.  const SENT_PENDING = 3
+	   $notifications = $this->SQL->query("
+select sum(total_unread.c) total from (
+select count(a.ActivityID) c from GDN_Activity a
+join GDN_Discussion d on d.DiscussionID = a.RecordID
+join GDN_Category c on c.CategoryID = d.CategoryID
+where a.NotifyUserID={$userID}  and a.Notified =3 and a.RecordType='Discussion' and c.GroupID ={$groupID} 
+UNION ALL
+select count(a.ActivityID) c from GDN_Activity a
+join GDN_Comment cm on cm.CommentID = a.RecordID
+join GDN_Discussion d on d.DiscussionID = cm.DiscussionID
+join GDN_Category c on c.CategoryID = d.CategoryID
+where a.NotifyUserID={$userID}  and a.Notified =3 and a.RecordType='Comment'  and c.GroupID = {$groupID} ) total_unread")->resultArray();
+
+        if (!is_array($notifications) || !isset($notifications[0])) {
+            return 0;
+        }
+        return $notifications[0]["total"] ?? 0;
+    }
+
 
     /**
      * Check add group permission

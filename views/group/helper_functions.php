@@ -40,11 +40,14 @@ if (!function_exists('watchGroupButton')) {
      * @return string
      */
     function watchGroupButton($group) {
+        $output = '';
+        if(hideInMFE()) {
+            return $output;
+        }
         $groupModel = new GroupModel();
         $canWatch = $groupModel->canWatchGroup($group);
         $hasWatched = $groupModel->hasWatchedGroup($group);
         $groupID = $group->GroupID;
-        $output = '';
         $text = $hasWatched ? t('Stop watching forum') : t('Watch forum');
 
         if($canWatch && !$hasWatched) {
@@ -256,7 +259,7 @@ if (!function_exists('writeGroupHeader')) {
                     ?></div>
             <?php } else {?>
                 <div class="Group-Archived"><?php
-                    $challengeAnchor  = $group->ChallengeUrl? anchor('challenge', $group->ChallengeUrl,'', ['target' => 'blank']):'challenge';
+                    $challengeAnchor  = !hideInMFE() && $group->ChallengeUrl? anchor('challenge', $group->ChallengeUrl,'', ['target' => 'blank']):'challenge';
                     echo '<span class="Archived">Archived</span><span>This '.$challengeAnchor.' forum has been archived.</span> ';
                     ?>
                 </div>
