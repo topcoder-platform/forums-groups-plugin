@@ -1427,15 +1427,60 @@ class GroupModel extends Gdn_Model {
         $groupID =  $group->GroupID;
         // Activity status: The activity is waiting to be sent.  const SENT_PENDING = 3
 	   $notifications = $this->SQL->query("
-select sum(unread_count) as total from (
-select CASE d.CountComments WHEN 0 THEN 1 ELSE d.CountComments - COALESCE(ud.CountComments, 0) END as 'unread_count' from (
-select d.DiscussionID, d.CountComments from GDN_Discussion d
-JOIN GDN_Category c
-JOIN GDN_Group g
-ON d.CategoryID=c.CategoryID AND c.GroupID=g.GroupID and g.groupID=${groupID}) d
-LEFT JOIN GDN_UserDiscussion ud
-ON d.DiscussionID=ud.DiscussionID and ud.UserId=${userID}
-where ((d.CountComments > COALESCE(ud.CountComments, 0)) or ud.DateLastViewed is null)) as t")->resultArray();
+select
+    count(*) as total
+from
+(
+    select
+        d.DiscussionID as DiscussionID
+    from
+        GDN_Discussion d
+    join
+        GDN_Category cat
+    on
+        d.CategoryID=cat.CategoryID
+    where
+        cat.GroupID={$groupID}
+) dc
+join
+(
+    select
+        DiscussionID,
+        DateLastViewed
+    from
+        GDN_UserDiscussion
+    where
+        UserID={$userID}
+        and
+        Dismissed=0
+) ud
+on
+    dc.DiscussionID=ud.DiscussionID
+join
+(
+    select
+        DiscussionID,
+        DateInserted
+    from
+        GDN_Comment
+    where
+        DateInserted is not null
+        and
+        (
+            DateDeleted is null
+            or
+            DateDeleted < DateInserted
+        )
+) c
+on
+    dc.DiscussionID=c.DiscussionID
+    and
+    (
+        ud.DateLastViewed is null
+        or
+        ud.DateLastViewed < c.DateInserted
+    )
+")->resultArray();
 
         if (!is_array($notifications) || !isset($notifications[0])) {
             return 0;
