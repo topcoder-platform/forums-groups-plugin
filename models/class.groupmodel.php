@@ -1231,7 +1231,7 @@ class GroupModel extends Gdn_Model {
             }
 
             Gdn::cache()->store($key, $map);
-            return $result;
+            return $map;
         } else {
             return $result;
         }
