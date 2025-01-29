@@ -300,6 +300,11 @@ paths:
         required: false
       summary: Unarchive a group.
 components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   requestBodies:
     GroupPost:
       content:
@@ -461,3 +466,5 @@ components:
         - watch
         - unreadNotifications
       type: object
+security:
+  - BearerAuth: []
